@@ -23,12 +23,13 @@ def SceneLikelihoodPreGoal(Observer, Scene, rollouts=10000, verbose=True):
 ##############
 # Parameters #
 ##############
-TrialName = "Trial B"
+TrialName = "Trial C"
 verbose = False
 World = "RoomA"
 # 5th row down, 4rth left. Starts from 0
 #Observation = [5,4]  # Trial A
-Observation = [8,5]
+#Observation = [8,5] # Trial B
+Observation = [4,7]
 Samples = 100
 rollouts = 1000
 
@@ -96,7 +97,7 @@ for R in Results:
 					StatePosterior[tuple(states)] += R[2] # Likelihood of reward function * likelihood of action generating scene
 				else:
 					StatePosterior[tuple(states)] = R[2]
-# Remove dictionary ugliness, normalize, round values, and remove everything that's practically 0 after normalizing:
+# Remove dictionary ugliness and normalize
 ca = sum(ActionPosterior.values())
 InferredActions = [ActionPosterior.keys(),ActionPosterior.values()]
 InferredActions[1] = [x/ca for x in InferredActions[1]]
@@ -117,6 +118,6 @@ with open(File,mode='w') as model_inferences:
 File = 'Posterior_Actions' + TrialName + ".csv"
 with open(File,mode='w') as model_inferences:
 	model_writer = csv.writer(model_inferences, delimiter=",")
-	ObservationLength=max([max([len(x) for x in Results[i][4].States]) for i in range(len(Results))])
+	ObservationLength=max([max([len(x) for x in Results[i][4].Actions]) for i in range(len(Results))])
 	model_writer.writerow(['MapHeight','MapWidth','Scene','Probability']+["Obs"+str(i) for i in range(ObservationLength)])
 	[model_writer.writerow([O.Plr.Map.mapheight,O.Plr.Map.mapwidth,Scene,InferredActions[1][i]]+list(InferredActions[0][i])) for i in range(len(InferredActions[1]))]
