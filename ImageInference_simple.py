@@ -25,7 +25,7 @@ TrialName = "Trial C" # THIS LINE
 verbose = False
 World = "RoomA" # THIS LINE
 Stage="Entering"
-# 5th row down, 7rth left. Indexing starts from 0
+# 4th row down, 7rth left. Indexing starts from 0
 Observation = [4,7] # THIS LINE
 Samples = 100
 rollouts = 1000
