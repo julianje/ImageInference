@@ -21,14 +21,12 @@ def SceneLikelihood(Observer, Scene, rollouts=10000, verbose=True, Stage="Enteri
 ##############
 # Parameters #
 ##############
-TrialName = "Trial C"
+TrialName = "Trial C" # THIS LINE
 verbose = False
-World = "RoomA"
-Stage="Either" # Is the agent entering, exiting or either?
-# 5th row down, 4rth left. Starts from 0
-#Observation = [5,4]  # Trial A
-#Observation = [8,5] # Trial B
-Observation = [4,7]
+World = "RoomA" # THIS LINE
+Stage="Entering"
+# 5th row down, 7rth left. Indexing starts from 0
+Observation = [4,7] # THIS LINE
 Samples = 100
 rollouts = 1000
 
