@@ -6,18 +6,16 @@ import numpy as np
 
 # Get State id from x,y coordinates
 def TranslateState(coords): return (coords[0])*O.Plr.Map.mapwidth+coords[1]
-# Get probability that agent generates scene, either before or after collecting the goal
-def SceneLikelihood(Observer, Scene, rollouts=10000, verbose=True):
-	Simulations = Observer.SimulateAgents(rollouts, ResampleAgent=False, Simple=False, Verbose=verbose, replan=False)
-	# Return: (1) agent's rewards, agent's probability of pursuing each object, likelihood of generating the scene, markers of which samples matched the scene, and AgentSimulation object (see AgentSimulation.py)
-	SceneMatches = [Scene in x for x in Simulations.States]
-	return([O.Plr.Agent.rewards,O.Plr.GetPlanDistribution(),sum(SceneMatches)*1.0/rollouts,SceneMatches,Simulations])
 
 # Get probability that agent generates scene, either *before* collecting the goal
-def SceneLikelihoodPreGoal(Observer, Scene, rollouts=10000, verbose=True):
+def SceneLikelihood(Observer, Scene, rollouts=10000, verbose=True, Stage="Entering"):
 	Simulations = Observer.SimulateAgents(rollouts, ResampleAgent=False, Simple=False, Verbose=verbose, replan=False)
-	# Hacky solution: Check first half of the path since the agent returns to their starting point.
-	SceneMatches = [Scene in x[0:len(x)/2] for x in Simulations.States]
+	if Stage=="Entering":
+		SceneMatches = [Scene in x[0:len(x)/2] for x in Simulations.States]
+	if Stage=="Exiting":
+		SceneMatches = [Scene in x[len(x)/2:len(x)] for x in Simulations.States]
+	if Stage=="Either":
+		SceneMatches = [Scene in x for x in Simulations.States]
 	return([O.Plr.Agent.rewards,O.Plr.GetPlanDistribution(),sum(SceneMatches)*1.0/rollouts,SceneMatches,Simulations])
 
 ##############
@@ -26,6 +24,7 @@ def SceneLikelihoodPreGoal(Observer, Scene, rollouts=10000, verbose=True):
 TrialName = "Trial C"
 verbose = False
 World = "RoomA"
+Stage="Either" # Is the agent entering, exiting or either?
 # 5th row down, 4rth left. Starts from 0
 #Observation = [5,4]  # Trial A
 #Observation = [8,5] # Trial B
@@ -44,7 +43,7 @@ for i in range(Samples):
 	O.Plr.Agent.ResampleAgent()
 	# Run the planner manually since SceneLikelihood has planning turned off on SimulateAgents
 	O.Plr.Prepare(Validate=False) # Don't check for inconsistencies in model so that code runs faster
-	Results[i] = SceneLikelihoodPreGoal(O, Scene, rollouts, verbose)
+	Results[i] = SceneLikelihood(O, Scene, rollouts, verbose, Stage=Stage)
 
 ##########################
 ## Now do stuff with the joint distribution
@@ -108,16 +107,33 @@ InferredStates[1] = [x/cb for x in InferredStates[1]]
 
 # Save state and action posterior
 # as a csv so we can visualize them in R
-File = 'Posterior_States_' + TrialName + ".csv"
+File = TrialName + "_States_Posterior.csv"
 with open(File,mode='w') as model_inferences:
 	model_writer = csv.writer(model_inferences, delimiter=",")
-	ObservationLength=max([max([len(x) for x in Results[i][4].States]) for i in range(len(Results))])
+	ObservationLength=max([len(x) for x in InferredStates[0]])
+	#ObservationLength=max([max([len(x) for x in Results[i][4].States]) for i in range(len(Results))])
 	model_writer.writerow(['MapHeight','MapWidth','Scene','Probability']+["Obs"+str(i) for i in range(ObservationLength)])
 	[model_writer.writerow([O.Plr.Map.mapheight,O.Plr.Map.mapwidth,Scene,InferredStates[1][i]]+list(InferredStates[0][i])) for i in range(len(InferredStates[1]))]
 
-File = 'Posterior_Actions' + TrialName + ".csv"
+File = TrialName + "_Actions_Posterior.csv"
 with open(File,mode='w') as model_inferences:
 	model_writer = csv.writer(model_inferences, delimiter=",")
-	ObservationLength=max([max([len(x) for x in Results[i][4].Actions]) for i in range(len(Results))])
+	ObservationLength=ObservationLength-1 # It will just be one less  than states above.
 	model_writer.writerow(['MapHeight','MapWidth','Scene','Probability']+["Obs"+str(i) for i in range(ObservationLength)])
 	[model_writer.writerow([O.Plr.Map.mapheight,O.Plr.Map.mapwidth,Scene,InferredActions[1][i]]+list(InferredActions[0][i])) for i in range(len(InferredActions[1]))]
+
+File = TrialName + "_Goal_Posterior.csv"
+with open(File,mode='w') as model_inferences:
+	model_writer = csv.writer(model_inferences, delimiter=",")
+	model_writer.writerow(['Goal','Probability'])
+	[model_writer.writerow([GoalNames[i],GoalProbs[i]]) for i in range(len(GoalNames))]
+
+# Create CSV with time estimate:
+Percentages = [x.index(Scene)*100/len(x) for x in InferredStates[0]]
+Probabilities = InferredStates[1]
+
+File = TrialName + "_Time_Estimates.csv"
+with open(File,mode='w') as model_inferences:
+	model_writer = csv.writer(model_inferences, delimiter=",")
+	model_writer.writerow(['Time','Probability'])
+	[model_writer.writerow([Percentages[i],Probabilities[i]]) for i in range(len(Percentages))]
