@@ -4,7 +4,7 @@ library(RColorBrewer)
 
 # Load everything ------------------------------------------
 Threshhold <- 0.0003 #Only plot trajectories with probability higher than this:
-TrialName = "Trial C"
+TrialName = "ND_UN"
 
 directory = "~/Documents/Projects/Models/ImageInference/ImageInference/"
 
@@ -30,14 +30,6 @@ time %>% group_by(Time) %>% summarise(Probability=sum(Probability)) %>%
   theme_classic()+scale_y_continuous(limits=c(0,1.01),breaks=c(0,0.5,1))+
   scale_x_continuous(limits=c(0,100))+
   theme(aspect.ratio=1)+ggtitle(paste("Time estimate: ",TrialName,sep=""))
-
-# Visualize starting pont -------------------------------
-States %>% filter(Time==0) %>% group_by(State) %>%
-  summarise(Probability=sum(Probability)) %>%
-  ggplot(aes(factor(State),Probability))+geom_bar(stat="identity")+
-  theme_classic()+scale_x_discrete("Starting point")+
-  scale_y_continuous("Probability",limits=c(0,1.01))+
-  ggtitle("Inferred starting point")
 
 # Visualize inferred path --------------------------------
 scene_x = posterior$Scene[1] %% mapwidth + 1
@@ -101,6 +93,15 @@ States %>% filter(Probability>=Threshhold) %>% arrange(Probability,Time) %>%
             aes(xmin=x1,xmax=x2,ymin=y1,ymax=y2,fill=id),alpha=1)+
   scale_fill_manual(values=c("#FF8F66","#8293FF","#7AB532"))
 
+# Visualize starting pont -------------------------------
+States %>% filter(Time==0) %>% group_by(State) %>%
+  summarise(Probability=sum(Probability)) %>%
+  ggplot(aes(factor(State),Probability))+geom_bar(stat="identity")+
+  theme_classic()+scale_x_discrete("Starting point")+
+  scale_y_continuous("Probability",limits=c(0,1.01))+
+  ggtitle("Inferred starting point")
+
+
 # Visualize density of actions over time:
 scc <- scale_fill_gradientn(colours = myPalette(100), limits=c(0,1))
 States %>% group_by(Time,y,x) %>% summarise(Probability=sum(Probability)) %>%
@@ -109,4 +110,6 @@ States %>% group_by(Time,y,x) %>% summarise(Probability=sum(Probability)) %>%
   scale_y_reverse("",limits=c(10.5,2))+scc+
   geom_hline(yintercept=2:9+0.5)+
   geom_vline(xintercept=2:9+0.5)+
-  geom_text(aes(x,y,label=round(Probability,2)))
+  geom_text(aes(x,y,label=round(Probability,2)))+
+  theme_classic()
+

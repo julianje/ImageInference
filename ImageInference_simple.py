@@ -21,20 +21,29 @@ def SceneLikelihood(Observer, Scene, rollouts=10000, verbose=True, Stage="Enteri
 ##############
 # Parameters #
 ##############
-TrialName = "Trial C" # THIS LINE
+# Inference parameters
 verbose = False
-World = "RoomA" # THIS LINE
 Stage="Entering"
-# 4th row down, 7rth left. Indexing starts from 0
-Observation = [4,7] # THIS LINE
-Doors = [[105,116],[45,44]] # List possible doors. Each item includes the starting and exit state (e.g., starting point is 105 and exit state is 116 OR sp=45 and exit state=44)
 Samples = 100
 rollouts = 1000
+
+# Trial parameters
+#TrialName = "Trial C"
+#World = "RoomA"
+#Doors = [[105,116],[45,44]] # List possible doors. Each item includes the starting and exit state (e.g., starting point is 105 and exit state is 116 OR sp=45 and exit state=44)
+#DoorNames = ["A","B"]
+# 4th row down, 7rth left. Indexing starts from 0
+#Observation = [4,7]
+
+TrialName = "ND_UN"
+World="ND_UN"
+Doors = [[64,65]]
+Observation = [5,7]
 
 #############
 # Run model #
 #############
-O = LoadObserver(World, Silent= not verbose)
+O = LoadObserver(World, Silent = not verbose)
 Scene = TranslateState(Observation)
 Results = [-1]*Samples
 Entrance = [-1]*Samples
@@ -52,7 +61,7 @@ for i in range(Samples):
 ##########################
 ## Now do stuff with the joint distribution
 #########################
-# Get normalizing constant over reward functons:
+# Get normalizing constant over reward functions:
 RNormalizer = sum([Results[i][2] for i in range(len(Results))])
 # Normalize samples:
 for i in range(len(Results)):
