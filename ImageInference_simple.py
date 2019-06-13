@@ -27,6 +27,7 @@ World = "RoomA" # THIS LINE
 Stage="Entering"
 # 4th row down, 7rth left. Indexing starts from 0
 Observation = [4,7] # THIS LINE
+Doors = [[105,116],[45,44]] # List possible doors. Each item includes the starting and exit state (e.g., starting point is 105 and exit state is 116 OR sp=45 and exit state=44)
 Samples = 100
 rollouts = 1000
 
@@ -36,12 +37,17 @@ rollouts = 1000
 O = LoadObserver(World, Silent= not verbose)
 Scene = TranslateState(Observation)
 Results = [-1]*Samples
+Entrance = [-1]*Samples
 for i in range(Samples):
 	sys.stdout.write("Reward function #"+str(i+1)+"\n")
+	States = random.choice(Doors)
+	O.SetStartingPoint(States[0],Verbose=False)
+	O.Plr.Map.ExitState=States[1]
 	O.Plr.Agent.ResampleAgent()
 	# Run the planner manually since SceneLikelihood has planning turned off on SimulateAgents
 	O.Plr.Prepare(Validate=False) # Don't check for inconsistencies in model so that code runs faster
 	Results[i] = SceneLikelihood(O, Scene, rollouts, verbose, Stage=Stage)
+	Entrance[i] = States[0]
 
 ##########################
 ## Now do stuff with the joint distribution

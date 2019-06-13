@@ -31,6 +31,14 @@ time %>% group_by(Time) %>% summarise(Probability=sum(Probability)) %>%
   scale_x_continuous(limits=c(0,100))+
   theme(aspect.ratio=1)+ggtitle(paste("Time estimate: ",TrialName,sep=""))
 
+# Visualize starting pont -------------------------------
+States %>% filter(Time==0) %>% group_by(State) %>%
+  summarise(Probability=sum(Probability)) %>%
+  ggplot(aes(factor(State),Probability))+geom_bar(stat="identity")+
+  theme_classic()+scale_x_discrete("Starting point")+
+  scale_y_continuous("Probability",limits=c(0,1.01))+
+  ggtitle("Inferred starting point")
+
 # Visualize inferred path --------------------------------
 scene_x = posterior$Scene[1] %% mapwidth + 1
 scene_y = ceiling(posterior$Scene[1]/mapwidth)
