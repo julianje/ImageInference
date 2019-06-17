@@ -35,10 +35,15 @@ rollouts = 1000
 # 4th row down, 7rth left. Indexing starts from 0
 #Observation = [4,7]
 
-TrialName = "ND_UN"
-World="ND_UN"
-Doors = [[64,65]]
-Observation = [5,7]
+#TrialName = "ND_UN"
+#World="ND_UN"
+#Doors = [[64,65]]
+#Observation = [5,7]
+
+TrialName = "UN_DX_A"
+World="UN_DX_A"
+Doors = [[56, 55], [93, 104]]
+Observation = [5,8]
 
 #############
 # Run model #
