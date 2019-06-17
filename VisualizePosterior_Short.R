@@ -3,10 +3,12 @@ library(gganimate)
 library(RColorBrewer)
 
 # Load everything ------------------------------------------
-Threshhold <- 0.0003 #Only plot trajectories with probability higher than this:
-TrialName = "ND_UN"
+Threshhold <- 0.001 #Only plot trajectories with probability higher than this:
+TrialName = "UN_DX_A"
 
 directory = "~/Documents/Projects/Models/ImageInference/ImageInference/"
+
+directory = "~/Downloads/"
 
 statesfile = paste(directory,TrialName,"_States_Posterior.csv",sep="")
 goalfile = paste(directory,TrialName,"_Goal_Posterior.csv",sep="")
@@ -94,13 +96,16 @@ States %>% filter(Probability>=Threshhold) %>% arrange(Probability,Time) %>%
   scale_fill_manual(values=c("#FF8F66","#8293FF","#7AB532"))
 
 # Visualize starting pont -------------------------------
-States %>% filter(Time==0) %>% group_by(State) %>%
-  summarise(Probability=sum(Probability)) %>%
-  ggplot(aes(factor(State),Probability))+geom_bar(stat="identity")+
+Entrances <- States %>% filter(Time==0) %>% group_by(State) %>%
+  summarise(Probability=sum(Probability)) %>% rename(Entrance=State)
+
+Entrances %>%
+  ggplot(aes(factor(Entrance),Probability))+geom_bar(stat="identity")+
   theme_classic()+scale_x_discrete("Starting point")+
   scale_y_continuous("Probability",limits=c(0,1.01))+
   ggtitle("Inferred starting point")
 
+write.csv(Entrances, paste(TrialName,"_Entrance.csv"),quote=F,row.names = F)
 
 # Visualize density of actions over time:
 scc <- scale_fill_gradientn(colours = myPalette(100), limits=c(0,1))
