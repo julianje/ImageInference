@@ -12,7 +12,7 @@ function trials() {
     {name: "DX_UN_0_no-grid.png", num_doors: 2},
     {name: "DX_DX_0_no-grid.png", num_doors: 2},
     {name: "DX_NX_0_no-grid.png", num_doors: 2},
-    {name: "DX_PY_0_no-grid.png", num_doors: 2},
+    {name: "DX_PX_0_no-grid.png", num_doors: 2},
     {name: "NX_UN_0_no-grid.png", num_doors: 3},
     {name: "NX_DX_0_no-grid.png", num_doors: 3},
     {name: "NX_NX_0_no-grid.png", num_doors: 3},
