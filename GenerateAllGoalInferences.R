@@ -1,5 +1,7 @@
 library(tidyverse)
 
+# Loads all goal inferences files and combines them into a single one.
+
 # Load everything ------------------------------------------
 directory = "~/Documents/Projects/Models/ImageInference/ImageInference/"
 
