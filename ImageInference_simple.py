@@ -147,11 +147,12 @@ with open(File,mode='w') as model_inferences:
 	[model_writer.writerow([GoalNames[i],GoalProbs[i]]) for i in range(len(GoalNames))]
 
 # Create CSV with time estimate:
-Percentages = [x.index(Scene)*100/len(x) for x in InferredStates[0]]
+ImageStep = [x.index(Scene) for x in InferredStates[0]]
+StepLength = [len(x) for x in InferredStates[0]]
 Probabilities = InferredStates[1]
 
 File = TrialName + "_Time_Estimates.csv"
 with open(File,mode='w') as model_inferences:
 	model_writer = csv.writer(model_inferences, delimiter=",")
-	model_writer.writerow(['Time','Probability'])
-	[model_writer.writerow([Percentages[i],Probabilities[i]]) for i in range(len(Percentages))]
+	model_writer.writerow(['Step','PathLength','Probability'])
+	[model_writer.writerow([ImageStep[i],StepLength[i],Probabilities[i]]) for i in range(len(Percentages))]
