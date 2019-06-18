@@ -1,14 +1,20 @@
 library(tidyverse)
 library(gganimate)
 library(RColorBrewer)
+library(png)
+
+library(grid)
+
+mypng <- readPNG('~/Desktop/introduction_0.png')
+g <- rasterGrob(mypng, interpolate=TRUE)
+
 
 # Load everything ------------------------------------------
 Threshhold <- 0.001 #Only plot trajectories with probability higher than this:
-TrialName = "UN_DX_A"
+TrialName = "UN_DX_0"
 
-directory = "~/Documents/Projects/Models/ImageInference/ImageInference/"
-
-directory = "~/Downloads/"
+directory = "~/Documents/Projects/Models/ImageInference/ImageInference/ModelPredictions/"
+setwd(directory)
 
 statesfile = paste(directory,TrialName,"_States_Posterior.csv",sep="")
 goalfile = paste(directory,TrialName,"_Goal_Posterior.csv",sep="")
@@ -70,7 +76,9 @@ States %>% filter(Probability>=Threshhold) %>% arrange(Probability,Time) %>%
   geom_point(data=data.frame(xv=c(2.5,2.5,9.5,9.5),yv=c(2.5,9.5,2.5,9.5)),aes(xv,yv),size=0.1)+
   geom_rect(data=data.frame(x1=c(2.5,2.5,8.5),x2=c(3.5,3.5,9.5),y1=c(2.5,8.5,2.5),y2=c(3.5,9.5,3.5),id=c("a","b","c")),
             aes(xmin=x1,xmax=x2,ymin=y1,ymax=y2,fill=id),alpha=1)+
-  scale_fill_manual(values=c("#FF8F66","#8293FF","#7AB532"))
+  scale_fill_manual(values=c("#FF8F66","#8293FF","#7AB532"))+
+  annotation_custom(g, xmin=2.5, xmax=9.5, ymin=-Inf, ymax=0.5)
+  #annotation_raster(mypng, ymin = 2.5,ymax= 9.5,xmin = 2.5,xmax = 9.5) 
 
 # color path based on probability
 scb <- scale_colour_gradientn(colours = myPalette(100), limits=c(min(States$Probability),max(States$Probability)))
