@@ -266,7 +266,11 @@ function make_slides(f) {
         "subject_information": exp.subj_data,
         "time_in_minutes": (Date.now() - exp.startT) / 60000
       };
-      setTimeout(function() {turk.submit(exp.data);}, 1000);
+      // setTimeout(function() {turk.submit(exp.data);}, 1000);
+      $(".end").html("<form name=\"SendData\" method=\"post\" action=\"end.php\">" +
+        "<input type=\"hidden\" name=\"ExperimentResult\" value='" + JSON.stringify(exp.data) + "' />" +
+        "<button type=\"submit\">Get code</button>" +
+        "</form>");
     }
   });
 

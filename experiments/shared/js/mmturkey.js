@@ -115,14 +115,14 @@ turk = turk || {};
     // If there's no turk info
     if (!assignmentId || !turkSubmitTo) {
       // Emit the debug output and stop
-      var div = document.createElement('div');
-      div.style.fontFamily = '"HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", sans-serif';
-      div.style.fontSize = "14px";
-      div.style.cssFloat = "right";
-      div.style.padding = "1em";
-      div.style.backgroundColor = "#dfdfdf";
-      div.innerHTML = "<p><b>Debug mode</b></p>Here is the data that would have been submitted to Turk: <ul>" + htmlify(rawData) + "</ul>"
-      document.body.appendChild(div);
+      // var div = document.createElement('div');
+      // div.style.fontFamily = '"HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", sans-serif';
+      // div.style.fontSize = "14px";
+      // div.style.cssFloat = "right";
+      // div.style.padding = "1em";
+      // div.style.backgroundColor = "#dfdfdf";
+      // div.innerHTML = "<p><b>Debug mode</b></p>Here is the data that would have been submitted to Turk: <ul>" + htmlify(rawData) + "</ul>"
+      // document.body.appendChild(div);
       return;
     }
 
