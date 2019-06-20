@@ -13,6 +13,7 @@ source("maps/map_specifications.R")
 # Only plot trajectories with probability higher than the threshold.
 threshold <- 0.005
 
+# Read in the full set of state inferences.
 StatePredictions <- data.frame(Files=list.files("data/model/predictions/")) %>%
   mutate(States=str_detect(Files, "States_Posterior")) %>% 
   tbl_df %>% 
@@ -29,6 +30,7 @@ fullposterior <- do.call(bind_rows,
 map_height = fullposterior$MapHeight[1]
 map_width = fullposterior$MapWidth[1]
 
+# Define how we want to plot each path.
 PlotPath <- function(m) {
   posterior <- fullposterior %>%
     mutate(Trial=as.character(Trial)) %>%
@@ -104,4 +106,5 @@ PlotPath <- function(m) {
          plot, device="pdf")
 }
 
+# Iterate through each map index.
 sapply(c(1:length(maps)), PlotPath)
