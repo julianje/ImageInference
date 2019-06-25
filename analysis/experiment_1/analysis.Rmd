@@ -3,19 +3,97 @@ title: "Image Inference - Experiment 1"
 output: html_notebook
 ---
 
-```{r, echo=FALSE}
+```{r setup, echo=FALSE}
+# Import R libraries.
+library(jsonlite)
 library(tidyverse)
 
+# Set the working directory.
+path <- "D:/Research/ImageInference/"
+knitr::opts_knit$set(root.dir=normalizePath("../.."))
 ```
 
 # Experiment 1
 
+## Stimuli
 
+## Data Analysis
+
+### pilot_0
+
+Some of the supplemental information collected from participants was lost due to lack of sanitizing inputs:
+
+- Participant 5YIBOVS: Questionnaire cut off after "problems". Reconstructing form with blank entries.
+- Participant Gx3kOR2: Questionnaire cut off in the middle of their response in "problems". Ending response at current location and reconstructing form with blank entries.
+- Participant 9UhOHcJ: Questionnaire cut off in the middle of their response in "problems". Ending response at current location and reconstructing form with blank entries.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Read in the raw data.
+data_0 <- read_csv("data/experiment_1/pilot_0/preprocessed_data.csv", quote="~")
+
+# Read in the MTurk results file.
+mturk_results = read_csv("data/experiment_1/pilot_0/mturk_results.csv", col_names=TRUE) %>%
+  mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode)))
+
+# Filter out any duplicate database entries based on the MTurk results file.
+duplicates <- setdiff(data_0$UniqueId, mturk_results$Answer.surveycode)
+data_1 <- data_0 %>%
+  filter(!(UniqueId %in% duplicates))
+
+# Convert the JSON string into JSON.
+data_2 = lapply(data_1$Results, fromJSON)
+
+# Extract the trial information for each participant and stack them.
+data_4 = tibble()
+for (p in 1:length(data_2)) {
+  # Trim the layout and add the participant ID back in.
+  data_3 = data_2[p][[1]]$trials %>%
+    as.data.frame() %>%
+    mutate(layout=gsub("_no-grid.png", "", layout), unique_id=data_1$UniqueId[p])
+
+  # Stack the trial information for the current participant.
+  data_4 = rbind(data_4, data_3)
+}
+
+# Write the data.
+write_csv(data_4, "data/experiment_1/pilot_0/data.csv")
+```
+
+#### Model Predictions
 
 ```{r}
-data_0 = read_csv("data/experiment_1/data.csv")
+#
+model_0 = read_csv("Entrance_Inference.csv")
+model_1 = read_csv("entrance_inference_extra.csv")
+model_2 = model_1 %>%
+  left_join(model_0)
+model_3 = model_2 %>%
+  mutate(Probability=ifelse(is.na(Probability), 0, Probability))
 
+#
+model_4 = read_csv("Goal_Inference.csv")
+model_5 = model_4 %>%
+  select(-Goal) %>%
+  spread(GoalLetter, Probability) %>%
+  rename(layout=Trial, model_A=A, model_B=B, model_C=C) %>%
+  mutate(z_model_A=scale(model_A), z_model_B=scale(model_B), z_model_C=scale(model_C))
 
+data_5 = data_4 %>%
+  mutate(A=A/(A+B+C), B=B/(A+B+C), C=C/(A+B+C)) %>%
+  select(unique_id, layout, human_A=A, human_B=B, human_C=C) %>%
+  group_by(unique_id) %>%
+  mutate(z_human_A=scale(human_A), z_human_B=scale(human_B), z_human_C=scale(human_C)) %>%
+  gather(human_goal, z_human_judgment, z_human_A, z_human_B, z_human_C) %>%
+  left_join(model_5) %>%
+  gather(model_goal, z_model_prediction, z_model_A, z_model_B, z_model_C)
+  
+
+data_5 %>%
+  # filter(!(unique_id %in% c("hMSntv7", "PaRNV33"))) %>%
+  ggplot(aes(x=z_model_prediction, y=z_human_judgment)) +
+  geom_point() +
+  geom_smooth(method="lm")
+  # facet_wrap(~unique_id)
 ```
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
