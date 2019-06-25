@@ -155,4 +155,4 @@ File = TrialName + "_Time_Estimates.csv"
 with open(File,mode='w') as model_inferences:
 	model_writer = csv.writer(model_inferences, delimiter=",")
 	model_writer.writerow(['Step','PathLength','Probability'])
-	[model_writer.writerow([ImageStep[i],StepLength[i],Probabilities[i]]) for i in range(len(Percentages))]
+	[model_writer.writerow([ImageStep[i],StepLength[i],Probabilities[i]]) for i in range(len(Probabilities))]
