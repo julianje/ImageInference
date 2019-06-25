@@ -3,15 +3,15 @@ library(gganimate)
 library(RColorBrewer)
 
 # Set working directory.
-# directory <- "~/Documents/Projects/Models/ImageInference/ImageInference/"
-directory <- "D:/Research/ImageInference/"
+directory <- "~/Documents/Projects/Models/ImageInference/ImageInference/"
+#directory <- "D:/Research/ImageInference/"
 setwd(directory)
 
 # Source the file with all of the map data.
 source("maps/map_specifications.R")
 
 # Only plot trajectories with probability higher than the threshold.
-threshold <- 0.005
+threshold <- 0.0025
 
 # Read in the full set of state inferences.
 StatePredictions <- data.frame(Files=list.files("data/model/predictions/")) %>%
