@@ -26,6 +26,8 @@ verbose = False
 Stage="Entering"
 Samples = 100
 rollouts = 1000
+diagonal = False
+path = "data/model/predictions/" + ("Manhattan/" if diagonal == False else "diagonal/")
 
 # Trial parameters
 #TrialName = "Trial C"
@@ -40,15 +42,15 @@ rollouts = 1000
 #Doors = [[64,65]]
 #Observation = [5,7]
 
-TrialName = "UN_DX_A"
-World="UN_DX_A"
-Doors = [[56, 55], [93, 104]]
-Observation = [5,8]
+TrialName = "ND_PX_0"
+World="ND_PX_0"
+Doors = [[42, 43]]
+Observation = [3, 6]
 
 #############
 # Run model #
 #############
-O = LoadObserver(World, Silent = not verbose)
+O = LoadObserver("maps/"+World, Silent = not verbose)
 Scene = TranslateState(Observation)
 Results = [-1]*Samples
 Entrance = [-1]*Samples
@@ -85,7 +87,7 @@ plt.ylabel('Probability')
 axes = plt.gca()
 axes.set_ylim([0,1])
 plt.title(TrialName)
-plt.savefig(TrialName+".png")
+plt.savefig(path+TrialName+".png")
 
 # Get Posterior over states and actions:
 ########################################
@@ -125,7 +127,7 @@ InferredStates[1] = [x/cb for x in InferredStates[1]]
 
 # Save state and action posterior
 # as a csv so we can visualize them in R
-File = TrialName + "_States_Posterior.csv"
+File = path + TrialName + "_States_Posterior.csv"
 with open(File,mode='w') as model_inferences:
 	model_writer = csv.writer(model_inferences, delimiter=",")
 	ObservationLength=max([len(x) for x in InferredStates[0]])
@@ -133,14 +135,14 @@ with open(File,mode='w') as model_inferences:
 	model_writer.writerow(['MapHeight','MapWidth','Scene','Probability']+["Obs"+str(i) for i in range(ObservationLength)])
 	[model_writer.writerow([O.Plr.Map.mapheight,O.Plr.Map.mapwidth,Scene,InferredStates[1][i]]+list(InferredStates[0][i])) for i in range(len(InferredStates[1]))]
 
-File = TrialName + "_Actions_Posterior.csv"
+File = path + TrialName + "_Actions_Posterior.csv"
 with open(File,mode='w') as model_inferences:
 	model_writer = csv.writer(model_inferences, delimiter=",")
 	ObservationLength=ObservationLength-1 # It will just be one less  than states above.
 	model_writer.writerow(['MapHeight','MapWidth','Scene','Probability']+["Obs"+str(i) for i in range(ObservationLength)])
 	[model_writer.writerow([O.Plr.Map.mapheight,O.Plr.Map.mapwidth,Scene,InferredActions[1][i]]+list(InferredActions[0][i])) for i in range(len(InferredActions[1]))]
 
-File = TrialName + "_Goal_Posterior.csv"
+File = path + TrialName + "_Goal_Posterior.csv"
 with open(File,mode='w') as model_inferences:
 	model_writer = csv.writer(model_inferences, delimiter=",")
 	model_writer.writerow(['Goal','Probability'])
@@ -151,7 +153,7 @@ ImageStep = [x.index(Scene) for x in InferredStates[0]]
 StepLength = [len(x) for x in InferredStates[0]]
 Probabilities = InferredStates[1]
 
-File = TrialName + "_Time_Estimates.csv"
+File = path + TrialName + "_Time_Estimates.csv"
 with open(File,mode='w') as model_inferences:
 	model_writer = csv.writer(model_inferences, delimiter=",")
 	model_writer.writerow(['Step','PathLength','Probability'])
