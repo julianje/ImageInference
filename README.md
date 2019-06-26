@@ -17,3 +17,5 @@
 	- [ ] `ND_PX_0`: Model making wrong prediction
 	- [ ] `NX_PX_0`: Not sure what's right or wrong here, might need to redesign
 	- [ ] `UN_NX_0`: Model making wrong prediction
+- [ ] Put up pilot_1
+- [ ] Design experiment_2
