@@ -1,25 +1,36 @@
 ---
 title: "Image Inference - Experiment 1"
-output: html_notebook
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+  pdf_document: default
 ---
 
 ```{r setup, echo=FALSE}
-# Import R libraries.
-library(jsonlite)
-library(tidyverse)
-
 # Set the working directory.
 path <- "D:/Research/ImageInference/"
 knitr::opts_knit$set(root.dir=normalizePath("../.."))
+
+# Turn off compile messages and warnings.
+knitr::opts_chunk$set(message=FALSE, warning=FALSE)
 ```
 
-# Experiment 1
+```{r, echo=FALSE}
+# Import R libraries.
+library(jsonlite)
+library(tidyverse)
+```
 
-## Stimuli
+# Stimuli
 
-## Data Analysis
+```{r, echo=FALSE}
 
-### pilot_0
+```
+
+# Data Analysis
+
+## pilot_0
 
 Some of the supplemental information collected from participants was lost due to lack of sanitizing inputs:
 
@@ -27,9 +38,9 @@ Some of the supplemental information collected from participants was lost due to
 - Participant Gx3kOR2: Questionnaire cut off in the middle of their response in "problems". Ending response at current location and reconstructing form with blank entries.
 - Participant 9UhOHcJ: Questionnaire cut off in the middle of their response in "problems". Ending response at current location and reconstructing form with blank entries.
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-# Read in the raw data.
-data_0 <- read_csv("data/experiment_1/pilot_0/preprocessed_data.csv", quote="~")
+```{r, echo=FALSE}
+# Read in the participant data (after manually removing errors).
+data_0 <- read_csv("data/experiment_1/pilot_0/clean_data.csv", quote="~")
 
 # Read in the MTurk results file.
 mturk_results = read_csv("data/experiment_1/pilot_0/mturk_results.csv", col_names=TRUE) %>%
@@ -55,49 +66,116 @@ for (p in 1:length(data_2)) {
   data_4 = rbind(data_4, data_3)
 }
 
-# Write the data.
+# Write the preprocessed data.
 write_csv(data_4, "data/experiment_1/pilot_0/data.csv")
 ```
 
-#### Model Predictions
+### Goal Predictions
 
-```{r}
-#
-model_0 = read_csv("Entrance_Inference.csv")
-model_1 = read_csv("entrance_inference_extra.csv")
-model_2 = model_1 %>%
-  left_join(model_0)
-model_3 = model_2 %>%
-  mutate(Probability=ifelse(is.na(Probability), 0, Probability))
+```{r, fig.align="center"}
+# Read in the goal predictions.
+model_0 = read_csv("data/model/predictions/Manhattan/goal_predictions.csv")
 
-#
-model_4 = read_csv("Goal_Inference.csv")
-model_5 = model_4 %>%
+# Perform some basic preprocessing and then z-score the model predictions.
+model_1 = model_0 %>%
   select(-Goal) %>%
-  spread(GoalLetter, Probability) %>%
-  rename(layout=Trial, model_A=A, model_B=B, model_C=C) %>%
-  mutate(z_model_A=scale(model_A), z_model_B=scale(model_B), z_model_C=scale(model_C))
+  rename(goal=GoalLetter, layout=Trial, model=Probability) %>%
+  mutate(z_model=scale(model))
 
+# Select the goal judgments, norm them, then z-score within participants.
 data_5 = data_4 %>%
-  mutate(A=A/(A+B+C), B=B/(A+B+C), C=C/(A+B+C)) %>%
-  select(unique_id, layout, human_A=A, human_B=B, human_C=C) %>%
+  select(unique_id, layout, A, B, C) %>%
+  mutate(norm_A=A/(A+B+C), norm_B=B/(A+B+C), norm_C=C/(A+B+C)) %>%
+  select(-A, -B, -C) %>%
+  rename(A=norm_A, B=norm_B, C=norm_C) %>%
+  gather(goal, human, A, B, C) %>%
   group_by(unique_id) %>%
-  mutate(z_human_A=scale(human_A), z_human_B=scale(human_B), z_human_C=scale(human_C)) %>%
-  gather(human_goal, z_human_judgment, z_human_A, z_human_B, z_human_C) %>%
-  left_join(model_5) %>%
-  gather(model_goal, z_model_prediction, z_model_A, z_model_B, z_model_C)
-  
+  mutate(z_human=scale(human)) %>%
+  ungroup() %>%
+  group_by(layout, goal) %>%
+  summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
+  left_join(model_1)
 
-data_5 %>%
-  # filter(!(unique_id %in% c("hMSntv7", "PaRNV33"))) %>%
-  ggplot(aes(x=z_model_prediction, y=z_human_judgment)) +
+# Plot the goal comparison.
+data_5 %>%  
+  ggplot(aes(x=z_model, y=mean_z_human, label=layout)) +
   geom_point() +
-  geom_smooth(method="lm")
-  # facet_wrap(~unique_id)
+  geom_smooth(method="lm") +
+  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  theme_bw() +
+  theme(plot.title=element_text(hjust=0.5))
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+The correlation is `r cor(data_5$z_model, data_5$mean_z_human, method="pearson")`. If we break down the results by goal, we get:
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+```{r, fig.align="center"}
+data_5 %>%
+  ggplot(aes(x=z_model, y=mean_z_human, label=layout)) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  facet_wrap(~goal) +
+  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  theme_bw() +
+  theme(plot.title=element_text(hjust=0.5))
+```
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+### Entrance Predictions
+
+```{r, fig.align="center"}
+# Read in the entrance predictions.
+model_0 = read_csv("data/model/predictions/Manhattan/entrance_predictions.csv")
+
+# Stitch the entrance mapping to the predictions and do some preprocessing.
+model_1 = model_0 %>%
+  left_join(read_csv("data/model/predictions/entrance_mapping.csv")) %>%
+  mutate(Probability=ifelse(is.na(Probability), 0, Probability)) %>%
+  select(-Entrance) %>%
+  rename(layout=TrialName, entrance=DoorNumber, model=Probability) %>%
+  mutate(entrance=as.character(entrance), z_model=scale(model))
+
+# Select the entrance judgments, norm them, then z-score within participants.
+data_6 = data_4 %>%
+  select(unique_id, layout, `1`, `2`, `3`) %>%
+  gather(entrance, human, `1`, `2`, `3`) %>%
+  mutate(human=ifelse(human==-1, 0, human)) %>%
+  spread(entrance, human) %>%
+  mutate(norm_1=`1`/(`1`+`2`+`3`), norm_2=`2`/(`1`+`2`+`3`), norm_3=`3`/(`1`+`2`+`3`)) %>%
+  select(-`1`, -`2`, -`3`) %>%
+  rename(`1`=norm_1, `2`=norm_2, `3`=norm_3) %>%
+  gather(entrance, human, `1`, `2`, `3`) %>%
+  group_by(unique_id) %>%
+  mutate(z_human=scale(human)) %>%
+  ungroup() %>%
+  group_by(layout, entrance) %>%
+  summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
+  left_join(model_1)
+
+# Omit missing data from trials that had only 1 or 2 entrances.
+data_7 = data_6 %>%
+  na.omit()
+
+# Plot the entrance comparison.
+data_7 %>%
+  ggplot(aes(x=z_model, y=mean_z_human, label=layout)) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  theme_bw() +
+  theme(plot.title=element_text(hjust=0.5))
+```
+
+The Pearson correlation is `r cor(data_7$z_model, data_7$mean_z_human, method="pearson")`.
+
+### Debugging
+
+```{r, echo=FALSE}
+# Extract the maps where the model predictions and human judgments differ
+# by more than 1 standard deviation.
+unique(data_5$layout[abs(data_5$mean_z_human-data_5$z_model[,1]) > 1])
+```
