@@ -24,7 +24,7 @@ def SceneLikelihood(Observer, Scene, rollouts=10000, verbose=True, Stage="Enteri
 # Inference parameters
 verbose = False
 Stage="Entering"
-Samples = 100
+Samples = 300
 rollouts = 1000
 diagonal = False
 path = "data/model/predictions/" + ("Manhattan/" if diagonal == False else "diagonal/")
@@ -42,10 +42,10 @@ path = "data/model/predictions/" + ("Manhattan/" if diagonal == False else "diag
 #Doors = [[64,65]]
 #Observation = [5,7]
 
-TrialName = "ND_PX_0"
-World="ND_PX_0"
-Doors = [[42, 43]]
-Observation = [3, 6]
+TrialName = "UN_NX_0"
+World="UN_NX_0"
+Doors = [[78, 77], [42, 43]]
+Observation = [7, 7]
 
 #############
 # Run model #

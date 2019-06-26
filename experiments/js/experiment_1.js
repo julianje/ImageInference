@@ -211,7 +211,7 @@ function make_slides(f) {
     else {
         exp.data_trials.push({
           "trial_num": j + 1,
-          "layout": exp.trials[j],
+          "map": exp.trials[j],
           "1": exp.sliderPost[0],
           "2": exp.sliderPost[2],
           "3": exp.sliderPost[4],
