@@ -268,7 +268,8 @@ function make_slides(f) {
       };
       // setTimeout(function() {turk.submit(exp.data);}, 1000);
       $(".end").html("<form name=\"SendData\" method=\"post\" action=\"end.php\">" +
-        "<input type=\"hidden\" name=\"ExperimentResult\" value='" + JSON.stringify(exp.data) + "' />" +
+        "<input type=\"hidden\" name=\"ExperimentResult\" value=\'" + 
+        JSON.stringify(exp.data).replace(/'/g, "") + "\' />" + 
         "<button type=\"submit\">Get code</button>" +
         "</form>");
     }
