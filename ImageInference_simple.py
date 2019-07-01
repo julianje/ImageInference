@@ -24,7 +24,7 @@ def SceneLikelihood(Observer, Scene, rollouts=10000, verbose=True, Stage="Enteri
 # Inference parameters
 verbose = False
 Stage="Entering"
-Samples = 300
+Samples = 1000
 rollouts = 1000
 diagonal = False
 path = "data/model/predictions/" + ("Manhattan/" if diagonal == False else "diagonal/")

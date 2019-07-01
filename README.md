@@ -6,6 +6,8 @@
 - Agent is always in pursuit of one object
 - Agent leaves the room in the same door they come in
 
+P(actions | scene) = sum(P(actions, rewards | scene)) = sum(P(actions | rewards, scene) * P(rewards))
+
 # To-do
 
 - [ ] Finish generating diagonal predictions:

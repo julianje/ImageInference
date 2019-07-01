@@ -22,15 +22,7 @@ library(jsonlite)
 library(tidyverse)
 ```
 
-# Stimuli
-
-```{r, echo=FALSE}
-
-```
-
-# Data Analysis
-
-## pilot_0
+# pilot_0
 
 Some of the supplemental information collected from participants was lost due to lack of sanitizing inputs:
 
@@ -70,7 +62,7 @@ for (p in 1:length(data_2)) {
 write_csv(data_4, "data/experiment_1/pilot_0/data.csv")
 ```
 
-### Goal Predictions
+## Goal Predictions
 
 ```{r, fig.align="center"}
 # Read in the goal predictions.
@@ -123,7 +115,7 @@ data_5 %>%
   theme(plot.title=element_text(hjust=0.5))
 ```
 
-### Entrance Predictions
+## Entrance Predictions
 
 ```{r, fig.align="center"}
 # Read in the entrance predictions.
@@ -170,9 +162,22 @@ data_7 %>%
   theme(plot.title=element_text(hjust=0.5))
 ```
 
-The Pearson correlation is `r cor(data_7$z_model, data_7$mean_z_human, method="pearson")`.
+The Pearson correlation is `r cor(data_7$z_model, data_7$mean_z_human, method="pearson")`.If we break down the results by entrance, we get:
 
-### Debugging
+```{r, fig.align="center"}
+data_7 %>%
+  ggplot(aes(x=z_model, y=mean_z_human, label=layout)) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  facet_wrap(~entrance) +
+  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  theme_bw() +
+  theme(plot.title=element_text(hjust=0.5))
+```
+
+## Debugging
 
 ```{r, echo=FALSE}
 # Extract the maps where the model predictions and human judgments differ

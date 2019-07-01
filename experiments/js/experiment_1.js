@@ -13,7 +13,7 @@ function make_slides(f) {
   });
 
   // Set up the introduction slides.
-  for (var i = 0; i < 6; i++) {
+  for (var i = 0; i < 7; i++) {
     slides["introduction_" + i] = slide({
       name: "introduction_" + i,
       start: function() {},
@@ -27,8 +27,8 @@ function make_slides(f) {
     start: function() {
       $(".catch_error").hide();
 
-      exp.question = ["How many corners is each person walking to?",
-                      "Are people always on their way to an corner?",
+      exp.question = ["How many corners are people walking to?",
+                      "Are people always on their way to a corner?",
                       "Can people move diagonally?",
                       "What color are the walls?"];
 
@@ -318,7 +318,7 @@ function init() {
 
   // Stitch together the blocks of the experiment.
   exp.structure = ["i0", "introduction_0", "introduction_1", "introduction_2", "introduction_3",
-                   "introduction_4", "introduction_5", "catch_trial"]; 
+                   "introduction_4", "introduction_5", "introduction_6", "catch_trial"]; 
   for (var k = 1; k <= exp.num_trials; k++) {
     exp.structure.push("trial" + k);
   }
