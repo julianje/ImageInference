@@ -37,15 +37,14 @@ path = "data/model/predictions/" + ("Manhattan/" if diagonal == False else "diag
 # 4th row down, 7rth left. Indexing starts from 0
 #Observation = [4,7]
 
-#TrialName = "ND_UN"
-#World="ND_UN"
-#Doors = [[64,65]]
-#Observation = [5,7]
-
-TrialName = "UN_NX_0"
-World="UN_NX_0"
-Doors = [[78, 77], [42, 43]]
-Observation = [7, 7]
+# TrialName = "UN_NX_0"
+# World="UN_NX_0"
+# Doors = [[78, 77], [42, 43]]
+# Observation = [7, 7]
+TrialName = "ND_PX_0"
+World = "ND_PX_0"
+Doors = [[42, 43]]
+Observation = [3, 3]
 
 #############
 # Run model #

@@ -26,7 +26,7 @@ Observation = [4, 4]
 TrialName = "ND_DX_1"
 World = "ND_DX_1"
 Doors = [[42, 43]]
-Observation = [2, 7]
+Observation = [2, 6]
 
 TrialName = "ND_NX_0"
 World = "ND_NX_0"
@@ -100,7 +100,7 @@ Observation = [6, 5]
 
 TrialName = "UN_NX_0"
 World = "UN_NX_0"
-Doors = [[42, 43], [78, 77]]
+Doors = [[42, 43], [18, 7]]
 Observation = [7, 7]
 
 TrialName = "UN_PX_0"
