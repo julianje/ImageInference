@@ -59,13 +59,13 @@ for (p in 1:length(data_2)) {
 }
 
 # Write the preprocessed data.
-write_csv(data_4, "data/experiment_1/pilot_0/data.csv")
+# write_csv(data_4, "data/experiment_1/pilot_0/data.csv")
 ```
 
 ## Goal Predictions
 
 ```{r, fig.align="center"}
-# Read in the goal predictions.
+# Read in the goal judgments and predictions.
 model_0 = read_csv("data/model/predictions/Manhattan/goal_predictions.csv")
 
 # Perform some basic preprocessing and then z-score the model predictions.
