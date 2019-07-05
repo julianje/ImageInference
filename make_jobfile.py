@@ -1,4 +1,8 @@
+import subprocess
+
 if __name__ == "__main__":
+	cluster = False
+
 	maps = [
 		{"map": "DX_DX_0", "doors": "16 5-56 55", "observation": "6 4", "num_doors": 1},
 		{"map": "DX_NX_0", "doors": "16 5-104 115", "observation": "5 4", "num_doors": 1},
@@ -12,18 +16,22 @@ if __name__ == "__main__":
 		{"map": "ND_PX_1", "doors": "104 115", "observation": "3 3", "num_doors": 2},
 		{"map": "ND_UN_0", "doors": "64 65", "observation": "5 6", "num_doors": 2},
 		{"map": "NX_DX_0", "doors": "64 65-56 55-106 117", "observation": "6 5", "num_doors": 3},
-		{"map": "NX_NX_0", "doors": "17 6-64 65-105 116", "observation": "5 4", "num_doors": 3},
+		{"map": "NX_NX_0", "doors": "17 6-75 76-105 116", "observation": "5 4", "num_doors": 3},
 		{"map": "NX_PX_0", "doors": "53 54-67 66-105 116", "observation": "3 7", "num_doors": 3},
 		{"map": "NX_UN_0", "doors": "56 55-64 65-106 117", "observation": "4 7", "num_doors": 3},
 		{"map": "PX_DX_0", "doors": "16 5-45 44-106 117", "observation": "6 2", "num_doors": 3},
 		{"map": "PX_NX_0", "doors": "64 65-67 66-107 118", "observation": "4 6", "num_doors": 3},
-		{"map": "PX_PX_0", "doors": "15 4-53 54-105 116", "observation": "4 2", "num_doors": 3},
+		{"map": "PX_PX_0", "doors": "16 5-53 54-103 114", "observation": "5 5", "num_doors": 3},
 		{"map": "PX_UN_0", "doors": "53 54-56 55-107 118", "observation": "4 7", "num_doors": 3},
 		{"map": "UN_DX_0", "doors": "16 5-56 55", "observation": "6 5", "num_doors": 2},
-		{"map": "UN_NX_0", "doors": "42 43-18 7", "observation": "7 7", "num_doors": 2},
+		{"map": "UN_NX_0", "doors": "18 7-78 77", "observation": "7 7", "num_doors": 2},
 		{"map": "UN_PX_0", "doors": "75 76-105 116", "observation": "5 3", "num_doors": 2},
 		{"map": "UN_UN_0", "doors": "64 65-104 115", "observation": "5 5", "num_doors": 2}
 	]
 
 	for m in maps:
-		print("python main.py %s '%s' '%s'" % (m["map"], m["doors"], m["observation"]))
+		if cluster == True:
+			print("python main.py %s '%s' '%s'" % (m["map"], m["doors"], m["observation"]))
+		else:
+			subprocess.call('python main.py %s "%s" "%s"' % (m["map"], m["doors"], m["observation"]), shell=True)
+		
