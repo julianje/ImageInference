@@ -1,7 +1,8 @@
 import subprocess
+import sys
 
 if __name__ == "__main__":
-	cluster = False
+	cluster = sys.argv[1]
 
 	maps = [
 		{"map": "DX_DX_0", "doors": "16 5-56 55", "observation": "6 4", "num_doors": 1},
