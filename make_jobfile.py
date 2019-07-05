@@ -31,8 +31,9 @@ if __name__ == "__main__":
 	]
 
 	for m in maps:
-		if cluster == True:
+		if cluster == "true":
 			print("python main.py %s '%s' '%s'" % (m["map"], m["doors"], m["observation"]))
-		else:
+		elif cluster == "false":
 			subprocess.call('python main.py %s "%s" "%s"' % (m["map"], m["doors"], m["observation"]), shell=True)
-		
+		else:
+			print("Please specify if this file is being run on the cluster (true/false).")
