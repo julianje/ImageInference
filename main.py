@@ -43,10 +43,11 @@ World = sys.argv[1]
 Doors = [[int(num) for num in pair.split(" ")] for pair in sys.argv[2].split("-")]
 Observation = [int(num) for num in sys.argv[3].split(" ")]
 print(TrialName)
-# TrialName = "ND_PX_0"
-# World = "ND_PX_0"
-# Doors = [[42, 43]]
-# Observation = [3, 3]
+plt.switch_backend('agg')
+# TrialName = "PX_PX_0"
+# World = "PX_PX_0"
+# Doors = [[16, 5], [53, 54], [103, 114]]
+# Observation = [5, 5]
 
 #############
 # Run model #
@@ -80,7 +81,7 @@ for i in range(len(Results)):
 GoalProbs= [sum([Results[sample][1][goal]*Results[sample][2] for sample in range(len(Results))]) for goal in range(len(O.Plr.Map.ObjectLocations))]
 GoalNames=O.Plr.Map.ObjectNames
 
-plt.clf()
+plt.figure(1)
 xvals = np.arange(len(GoalNames))
 plt.bar(xvals,GoalProbs,align='center',alpha=0.5)
 plt.xticks(xvals,GoalNames)
@@ -89,6 +90,7 @@ axes = plt.gca()
 axes.set_ylim([0,1])
 plt.title(TrialName)
 plt.savefig(path+TrialName+".png")
+plt.close(1)
 
 # Get Posterior over states and actions:
 ########################################
