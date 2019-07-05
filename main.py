@@ -3,6 +3,7 @@ import itertools as it
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
 
 # Get State id from x,y coordinates
 def TranslateState(coords): return (coords[0])*O.Plr.Map.mapwidth+coords[1]
@@ -37,14 +38,15 @@ path = "data/model/predictions/" + ("Manhattan/" if diagonal == False else "diag
 # 4th row down, 7rth left. Indexing starts from 0
 #Observation = [4,7]
 
-# TrialName = "UN_NX_0"
-# World="UN_NX_0"
-# Doors = [[78, 77], [42, 43]]
-# Observation = [7, 7]
-TrialName = "ND_PX_0"
-World = "ND_PX_0"
-Doors = [[42, 43]]
-Observation = [3, 3]
+TrialName = sys.argv[1]
+World = sys.argv[1]
+Doors = [[int(num) for num in pair.split(" ")] for pair in sys.argv[2].split("-")]
+Observation = [int(num) for num in sys.argv[3].split(" ")]
+print(TrialName)
+# TrialName = "ND_PX_0"
+# World = "ND_PX_0"
+# Doors = [[42, 43]]
+# Observation = [3, 3]
 
 #############
 # Run model #
