@@ -281,7 +281,7 @@ function make_slides(f) {
 function init() {
 
   // Set up the payment amount and Unique Turker.
-  exp.time = 20;
+  exp.time = 15;
   $(".time").html(exp.time);
   $(".payment").html("$" + (exp.time*6/60).toPrecision(3));
   repeatWorker = false;
