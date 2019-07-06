@@ -24,4 +24,8 @@ P(actions | scene) = sum(P(actions, rewards | scene)) = sum(P(actions | rewards,
 	- [X] `NX_PX_0`: Not sure what's right or wrong here, might need to redesign
 	- [X] `UN_NX_0`: Model making wrong prediction
 - [X] Put up pilot_1
+- [ ] Analyze pilot_1 results
+- [ ] Write up pre-registration
+- [ ] Run experiment_1
+- [ ] Analyze experiment_1 results
 - [ ] Design experiment_2
