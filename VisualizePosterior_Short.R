@@ -11,9 +11,10 @@ g <- rasterGrob(mypng, interpolate=TRUE)
 
 # Load everything ------------------------------------------
 Threshhold <- 0.001 #Only plot trajectories with probability higher than this:
-TrialName = "UN_DX_0"
+TrialName = "NX_NX_0"
 
-directory = "~/Documents/Projects/Models/ImageInference/ImageInference/ModelPredictions/"
+# directory = "~/Documents/Projects/Models/ImageInference/ImageInference/ModelPredictions/"
+directory = "D:/Research/ImageInference/data/model/predictions/Manhattan/"
 setwd(directory)
 
 statesfile = paste(directory,TrialName,"_States_Posterior.csv",sep="")
