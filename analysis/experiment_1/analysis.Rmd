@@ -214,6 +214,26 @@ for (p in 1:length(data_1)) {
 # write_csv(data_3, "data/experiment_1/pilot_1/data.csv")
 ```
 
+
+```{r}
+library(corrplot)
+data_3 %>%
+  select(map, A, B, C, unique_id) %>%
+  gather(goal, value, A, B, C) %>%
+  ggplot(aes(x=value, fill=goal)) +
+  geom_density(alpha=0.3)
+  
+  mutate(full_id=paste(map, goal, sep="_")) %>%
+  select(-map, -goal) %>%
+  spread(unique_id, value) %>%
+  select(-full_id) %>%
+  cor()
+
+  corrplot()
+  
+
+```
+
 ## Goal Predictions
 
 ```{r, fig.align="center"}

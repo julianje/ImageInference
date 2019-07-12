@@ -46,7 +46,7 @@ Observation = [3, 5]
 TrialName = "ND_PX_1"
 World = "ND_PX_1"
 Doors = [[104, 115]]
-Observation = [3, 3]
+Observation = [3, 4]
 
 TrialName = "ND_UN_0"
 World = "ND_UN_0"
@@ -65,8 +65,8 @@ Observation = [5, 4]
 
 TrialName = "NX_PX_0"
 World = "NX_PX_0"
-Doors = [[53, 54], [67, 66], [105, 116]]
-Observation = [3, 7]
+Doors = [[34, 33], [75, 76], [105, 116]]
+Observation = [5, 3]
 
 TrialName = "NX_UN_0"
 World = "NX_UN_0"
@@ -85,8 +85,8 @@ Observation = [4, 6]
 
 TrialName = "PX_PX_0"
 World = "PX_PX_0"
-Doors = [[16, 5], [53, 54], [103, 114]]
-Observation = [5, 2]
+Doors = [[42, 43], [34, 33], [106, 117]]
+Observation = [5, 3]
 
 TrialName = "PX_UN_0"
 World = "PX_UN_0"
