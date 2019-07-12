@@ -273,7 +273,6 @@ walls = list(
   c(),
   # ND_PX_1
   c(
-    geom_rect(aes(xmin=4.5, xmax=5.5, ymin=3.5, ymax=4.5, fill="gray"), alpha=1),
     geom_rect(aes(xmin=5.5, xmax=6.5, ymin=3.5, ymax=4.5, fill="gray"), alpha=1),
     geom_rect(aes(xmin=6.5, xmax=7.5, ymin=3.5, ymax=4.5, fill="gray"), alpha=1),
     geom_rect(aes(xmin=7.5, xmax=8.5, ymin=3.5, ymax=4.5, fill="gray"), alpha=1),
@@ -305,15 +304,12 @@ walls = list(
   ),
   # NX_PX_0
   c(
-    geom_rect(aes(xmin=4.5, xmax=5.5, ymin=3.5, ymax=4.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=5.5, xmax=6.5, ymin=3.5, ymax=4.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=6.5, xmax=7.5, ymin=3.5, ymax=4.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=3.5, xmax=4.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=3.5, xmax=4.5, ymin=5.5, ymax=6.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=5.5, xmax=6.5, ymin=5.5, ymax=6.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=5.5, xmax=6.5, ymin=6.5, ymax=7.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=5.5, xmax=6.5, ymin=7.5, ymax=8.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=5.5, xmax=6.5, ymin=8.5, ymax=9.5, fill="gray"), alpha=1)
+    geom_rect(aes(xmin=5.5, xmax=6.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1),
+    geom_rect(aes(xmin=6.5, xmax=7.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1),
+    geom_rect(aes(xmin=7.5, xmax=8.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1),
+    geom_rect(aes(xmin=4.5, xmax=5.5, ymin=6.5, ymax=7.5, fill="gray"), alpha=1),
+    geom_rect(aes(xmin=4.5, xmax=5.5, ymin=7.5, ymax=8.5, fill="gray"), alpha=1),
+    geom_rect(aes(xmin=4.5, xmax=5.5, ymin=8.5, ymax=9.5, fill="gray"), alpha=1)
   ),
   # NX_UN_0
   c(
@@ -348,12 +344,12 @@ walls = list(
   ),
   # PX_PX_0
   c(
-    geom_rect(aes(xmin=3.5, xmax=4.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=4.5, xmax=5.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1),
     geom_rect(aes(xmin=5.5, xmax=6.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1),
+    geom_rect(aes(xmin=6.5, xmax=7.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1),
     geom_rect(aes(xmin=7.5, xmax=8.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=5.5, xmax=6.5, ymin=7.5, ymax=8.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=5.5, xmax=6.5, ymin=8.5, ymax=9.5, fill="gray"), alpha=1)
+    geom_rect(aes(xmin=4.5, xmax=5.5, ymin=6.5, ymax=7.5, fill="gray"), alpha=1),
+    geom_rect(aes(xmin=4.5, xmax=5.5, ymin=7.5, ymax=8.5, fill="gray"), alpha=1),
+    geom_rect(aes(xmin=4.5, xmax=5.5, ymin=8.5, ymax=9.5, fill="gray"), alpha=1)
   ),
   # PX_UN_0
   c(

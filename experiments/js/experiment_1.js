@@ -13,7 +13,7 @@ function make_slides(f) {
   });
 
   // Set up the introduction slides.
-  for (var i = 0; i < 7; i++) {
+  for (var i = 0; i < 8; i++) {
     slides["introduction_" + i] = slide({
       name: "introduction_" + i,
       start: function() {},
@@ -29,6 +29,7 @@ function make_slides(f) {
 
       exp.question = ["How many corners are people walking to?",
                       "Are people always on their way to a corner?",
+                      "Do people get to choose which door they walk through?",
                       "Can people move diagonally?",
                       "What color are the walls?"];
 
@@ -46,18 +47,24 @@ function make_slides(f) {
         "<label><input type=\"radio\" name=\"question_1\" value=\"1\"/>No</label>" +
         "<label><input type=\"radio\" name=\"question_1\" value=\"-1\"/>Not sure</label>" +
         "</p>" +
-        "<p>" + exp.question[2] + "</p>" + 
+        "<p>" + exp.question[2] + "</p>" +
         "<p>" +
         "<label><input type=\"radio\" name=\"question_2\" value=\"0\"/>Yes</label>" +
-        "<label><input type=\"radio\" name=\"question_2\" value=\"1\"/>No</label>" + 
+        "<label><input type=\"radio\" name=\"question_2\" value=\"1\"/>No</label>" +
         "<label><input type=\"radio\" name=\"question_2\" value=\"-1\"/>Not sure</label>" +
         "</p>" +
-        "<p>" + exp.question[3] + "</p>" +
+        "<p>" + exp.question[3] + "</p>" + 
         "<p>" +
-        "<label><input type=\"radio\" name=\"question_3\" value=\"0\"/>White</label>" +
-        "<label><input type=\"radio\" name=\"question_3\" value=\"1\"/>Gray</label>" +
-        "<label><input type=\"radio\" name=\"question_3\" value=\"2\"/>Red</label>" +
+        "<label><input type=\"radio\" name=\"question_3\" value=\"0\"/>Yes</label>" +
+        "<label><input type=\"radio\" name=\"question_3\" value=\"1\"/>No</label>" + 
         "<label><input type=\"radio\" name=\"question_3\" value=\"-1\"/>Not sure</label>" +
+        "</p>" +
+        "<p>" + exp.question[4] + "</p>" +
+        "<p>" +
+        "<label><input type=\"radio\" name=\"question_4\" value=\"0\"/>White</label>" +
+        "<label><input type=\"radio\" name=\"question_4\" value=\"1\"/>Gray</label>" +
+        "<label><input type=\"radio\" name=\"question_4\" value=\"2\"/>Red</label>" +
+        "<label><input type=\"radio\" name=\"question_4\" value=\"-1\"/>Not sure</label>" +
         "</p>");
     },
     button: function() {
@@ -65,19 +72,22 @@ function make_slides(f) {
       exp.target_1 = $("input[name='question_1']:checked").val();
       exp.target_2 = $("input[name='question_2']:checked").val();
       exp.target_3 = $("input[name='question_3']:checked").val();
+      exp.target_4 = $("input[name='question_4']:checked").val();
 
       // If a participant fails to answer every question.
       if ((exp.target_0 === undefined) || (exp.target_1 === undefined) || (exp.target_2 === undefined) ||
-          (exp.target_3 === undefined)) {
+          (exp.target_3 === undefined) || (exp.target_4 === undefined)) {
           $(".catch_error").show();
       }
 
       // If a participant answers any question incorrectly..
       else if ((exp.target_0 != "0") || (exp.target_1 != "0") || (exp.target_2 != "1") || 
-               (exp.target_3 != "1")) {
+               (exp.target_3 != "1") || (exp.target_4 != "1")) {
         $(".catch_error").hide();
         wrong_attempts++;
-        exp.go(-6);
+        exp.go(-8);
+        $(".bar").css('width', ((100/exp.nQs) + "%"));
+        exp.phase = 2;
         $(".start_over").show();
       }
       else {
@@ -90,6 +100,8 @@ function make_slides(f) {
           "target_2": exp.target_2,
           "question_3": exp.question[3],
           "target_3": exp.target_3,
+          "question_4": exp.question[4],
+          "target_4": exp.target_4,
           "wrong_attempts": wrong_attempts
         });
         exp.go();
@@ -319,7 +331,7 @@ function init() {
 
   // Stitch together the blocks of the experiment.
   exp.structure = ["i0", "introduction_0", "introduction_1", "introduction_2", "introduction_3",
-                   "introduction_4", "introduction_5", "introduction_6", "catch_trial"]; 
+                   "introduction_4", "introduction_5", "introduction_6", "introduction_7", "catch_trial"]; 
   for (var k = 1; k <= exp.num_trials; k++) {
     exp.structure.push("trial" + k);
   }
