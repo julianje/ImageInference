@@ -44,7 +44,8 @@
             <span id="logo">Computation and Cognitive Development Lab</span>
         </div>
         <div id="instruct-text">
-            <p>In this experiment, you will be shown people in different rooms and asked to figure out where they were trying to go. The HIT should take about <span class="time"></span> minutes. Please read carefully, thanks!</p>
+            <p>In this experiment, you will first read through the introduction and take a short, 5-question quiz. Then, you will be shown a series of people in different rooms and asked to figure out where they were trying to go and where they came from.</p>
+            <p>Please read carefully! If you pass the quiz on the first try, you will be eligible for a $0.50 bonus! The HIT should take about <span class="time"></span> minutes. Press Start Experiment to begin.</p>
         </div>
         <div id="legal">
             <span style="text-align:center;font-weight:bold;">LEGAL INFORMATION</span>
@@ -69,18 +70,18 @@
     <!-- Instruction slides. -->
     <div class="slide" id="introduction_0">
         <h3>Introduction</h3>
-        <p align="left" style="text-indent:40px;margin-bottom:0px;">In this experiment, you will see many bird's-eye view images of a person (the dot) standing in a room, like below:</p>
-        <br>
+        <p align="left" style="text-indent:40px;margin-bottom:0px;">You will be presented with a series of bird's-eye view images of a person (the dot) standing in a room and on their way to one of 3 labeled corners, like below:</p>
+        <br><br>
         <div class="stimulus">
             <img style="height:250px;width:auto;" src="../stimuli/experiment_1/introduction_0.png"></img>
         </div>
         <button onclick="_s.button()">Continue</button>
-        <p class="start_over">Sorry, you failed the questionnaire. Please re-read the introduction and try again.</p>
+        <p class="start_over">Sorry, you failed the quiz. Please re-read the introduction and try again.</p>
     </div>
     <div class="slide" id="introduction_1">
         <h3>Introduction</h3>
-        <p align="left" style="text-indent:40px;margin-bottom:0px;">Each room contains 3 labeled corners. The corners are labeled <span style="font-family:Lucida Console;">A</span>, <span style="font-family:Lucida Console;">B</span>, and <span style="font-family:Lucida Console;">C</span>. The corners always have the same label from room to room.</p>
-        <br>
+        <p align="left" style="text-indent:40px;margin-bottom:0px;">Each room contains 3 labeled corners. The corners are labeled <span style="font-family:Lucida Console;">A</span>, <span style="font-family:Lucida Console;">B</span>, and <span style="font-family:Lucida Console;">C</span>. The corners always have the same label from one room to the next.</p>
+        <br><br>
         <div class="stimulus">
             <img style="height:250px;width:auto;" src="../stimuli/experiment_1/introduction_1.png"></img>
         </div>
@@ -89,7 +90,7 @@
     <div class="slide" id="introduction_2">
         <h3>Introduction</h3>
         <p align="left" style="text-indent:40px;margin-bottom:0px;">Each room also contains <b>up to</b> 3 labeled doors. The doors are labeled <span style="font-family:Lucida Console";>1</span>, <span style="font-family:Lucida Console";>2</span>, and <span style="font-family:Lucida Console";>3</span>. Pay particular attention to the door numbers since Door <span style="font-family:Lucida Console";>1</span> in one room may not be Door <span style="font-family:Lucida Console";>1</span> in the next.</p>
-        <br>
+        <br><br>
         <div class="stimulus">
             <img style="height:250px;width:auto;" src="../stimuli/experiment_1/introduction_2.png"></img>
         </div>
@@ -97,7 +98,7 @@
     </div>
     <div class="slide" id="introduction_3">
         <h3>Introduction</h3>
-        <p align="left" style="text-indent:40px;margin-bottom:0px;">Some rooms will have gray walls. People can move horizontally or vertically in the room to get around the gray walls, but they cannot walk through them or walk diagonally.</p>
+        <p align="left" style="text-indent:40px;margin-bottom:0px;">Some rooms will have gray walls that people cannot walk through. People can move horizontally or vertically in the room to get around these walls, but they also cannot walk diagonally anywhere in the room.</p>
         <br>
         <div class="stimulus">
             <img style="height:250px;width:auto;" src="../stimuli/experiment_1/introduction_3.png"></img>
@@ -106,7 +107,8 @@
     </div>
     <div class="slide" id="introduction_4">
         <h3>Introduction</h3>
-        <p align="left" style="text-indent:40px;margin-bottom:0px;">In every image you see, people will be walking towards one of the three corners in the room. People always know where the labeled corners are, despite any walls, and only ever go after one corner.</p>
+        <p align="left" style="text-indent:40px;margin-bottom:0px;">People are always walking towards one and only one of the 3 corners in the room. People always know where all of the corners are, even if there are walls in the way.</p>
+        <br><br>
         <div class="stimulus">
             <img style="height:250px;width:auto;" src="../stimuli/experiment_1/introduction_4.png"></img>
         </div>
@@ -114,8 +116,8 @@
     </div>
     <div class="slide" id="introduction_5">
         <h3>Introduction</h3>
-        <p align="left" style="text-indent:40px;margin-bottom:0px;">Despite knowing where to go, people do <b>not</b> get to choose which door they enter.</p>
-        <br><br>
+        <p align="left" style="text-indent:40px;margin-bottom:0px;">People do <b>not</b> get to choose which door they enter. Someone else randomly chooses a door for them to walk through, regardless of their corner preferences. People do not care about which door they get assigned. They will still go for their preferred corner, even if it is farther than other corners.</p>
+        <br>
         <div class="stimulus">
             <img style="height:250px;width:auto;" src="../stimuli/experiment_1/introduction_5.png"></img>
         </div>
@@ -124,7 +126,7 @@
     <div class="slide" id="introduction_6">
         <h3>Introduction</h3>
         <p align="left" style="text-indent:40px;margin-bottom:0px;">In each trial, you will not see the grid lines, though everything previously mentioned still applies.</p>
-        <br>
+        <br><br>
         <div class="stimulus">
             <img style="height:250px;width:auto;border:1px solid black;" src="../stimuli/experiment_1/introduction_6.png"></img>
         </div>
@@ -132,14 +134,14 @@
     </div>
     <div class="slide" id="introduction_7">
         <h3>Introduction</h3>
-        <p>In this experiment, your task is to figure out:</p>
+        <p>Your task is to figure out:</p>
         <ul style="text-align:left;">
-            <li>For rooms that have more than one door, which door they took to get into the room (from "definitely not" to "definitely" for each available door)</li>
-            <li>Which corner this person was going for (from "definitely not" to "definitely" for each corner <span style="font-family:Lucida Console";>A</span>, <span style="font-family:Lucida Console";>B</span>, and <span style="font-family:Lucida Console";>C</span>)</li>
+            <li>For rooms that have more than one door, which door that person walked through (using a scale from "definitely not" to "definitely" for each available door)</li>
+            <li>Which corner that person was going for (using a scale from "definitely not" to "definitely" for each corner <span style="font-family:Lucida Console";>A</span>, <span style="font-family:Lucida Console";>B</span>, and <span style="font-family:Lucida Console";>C</span>)</li>
             
         </ul>
-        <p>As a reminder, people cannot walk through the walls or walk diagonally.</p>
-        <p>There are <span class="num_trials"></span> trials in total. Press Continue to begin.</p>
+        <p>As a reminder, people cannot walk through the walls or walk diagonally anywhere in the room.</p>
+        <p>There are <span class="num_trials"></span> trials in total. Press Continue to begin the quiz.</p>
         <button onclick="_s.button()">Continue</button>
     </div>
 
