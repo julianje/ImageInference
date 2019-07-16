@@ -369,7 +369,6 @@ for (p in 1:length(data_1)) {
 # write_csv(data_3, "data/experiment_1/pilot_2/data.csv")
 ```
 
-
 ```{r}
 library(corrplot)
 data_3 %>%
@@ -401,13 +400,20 @@ data_3 %>%
 
 data_3 = data_3 %>% 
   filter(wrong_attempts < 2)
+data_4 %>%
+  gather(type, value, mean_z_human, z_model) %>%
+  ggplot(aes(x=goal, y=value, group=type)) +
+  geom_point(aes(color=type)) +
+  geom_line(aes(color=type)) + 
+  facet_wrap(~map) +
+  theme_classic()
 ```
 
 ## Goal Predictions
 
 ```{r, fig.align="center"}
 # Read in the goal judgments and predictions.
-model_0 = read_csv("data/model/predictions/Manhattan/goal_predictions.csv")
+model_0 = read_csv("data/model/predictions/Manhattan_current/goal_predictions.csv")
 
 # Perform some basic preprocessing and then z-score the model predictions.
 model_1 = model_0 %>%
@@ -432,11 +438,11 @@ data_4 = data_3 %>%
 # Plot the goal comparison.
 data_4 %>%
   # filter(!(map %in% c("DX_UN_0", "ND_PX_0", "ND_PX_1"))) %>%
-  filter(!(map %in% c("DX_UN_0", "ND_PX_1"))) %>%
+  # filter(!(map %in% c("DX_UN_0", "ND_PX_1"))) %>%
   ggplot(aes(x=z_model, y=mean_z_human, label=map)) +
   geom_point() +
-  geom_text(vjust=-1.0) +
-  geom_smooth(method="lm") +
+  # geom_text(vjust=-1.0) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed") +
   ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
   xlab("Model Predictions") +
   ylab("Human Judgments") +
