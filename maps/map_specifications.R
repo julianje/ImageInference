@@ -284,9 +284,10 @@ walls = list(
   ),
   # ND_UN_0
   c(
-    geom_rect(aes(xmin=6.5, xmax=7.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=7.5, xmax=8.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1),
-    geom_rect(aes(xmin=8.5, xmax=9.5, ymin=4.5, ymax=5.5, fill="gray"), alpha=1)
+    geom_rect(aes(xmin=6.5, xmax=7.5, ymin=6.5, ymax=7.5, fill="gray"), alpha=1),
+    geom_rect(aes(xmin=7.5, xmax=8.5, ymin=6.5, ymax=7.5, fill="gray"), alpha=1),
+    geom_rect(aes(xmin=8.5, xmax=9.5, ymin=6.5, ymax=7.5, fill="gray"), alpha=1),
+    geom_rect(aes(xmin=5.5, xmax=6.5, ymin=8.5, ymax=9.5, fill="gray"), alpha=1)
   ),
   # NX_DX_0
   c(
