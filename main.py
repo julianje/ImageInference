@@ -28,7 +28,8 @@ Stage="Entering"
 Samples = 1000
 rollouts = 1000
 diagonal = False
-path = "data/model/predictions/" + ("Manhattan_extra/" if diagonal == False else "diagonal/")
+path = "data/model/predictions/" + ("Manhattan_new/" if diagonal == False else "diagonal/")
+path = "data/model/predictions/" + ("" if diagonal == False else "diagonal/")
 
 # Trial parameters
 #TrialName = "Trial C"
@@ -44,19 +45,28 @@ path = "data/model/predictions/" + ("Manhattan_extra/" if diagonal == False else
 # Observation = [int(num) for num in sys.argv[3].split(" ")]
 # print(TrialName)
 # plt.switch_backend('agg')
-TrialName = "ND_UN_0"
-World = "ND_UN_0"
-Doors = [[86, 87]]
-Observation = [7, 6]
-# TrialName = "NX_UN_0"
-# World = "NX_UN_0"
-# Doors = [[56, 55], [64, 65], [106, 117]]
-# Observation = [4, 7]
-
+# TrialName = "NX_PX_0"
+# World = "NX_PX_0"
+# Doors = [[75, 76], [105, 116], [34, 33]]
+# Observation = [5, 3]
+# TrialName = "DX_PX_0"
+# World = "DX_PX_0"
+# Doors = [[15, 4], [86, 87]]
+# Observation = [4, 6]
+# TrialName = "PX_NX_0"
+# World = "PX_NX_0"
+# Doors = [[64, 65], [106, 117], [67, 66]]
+# Observation = [4, 6]
+TrialName = "PX_PX_0"
+World = "PX_PX_0"
+# Doors = [[15, 4], [64, 65], [105, 116]]
+Doors = [[17, 6], [34, 33], [105, 116]]
+Observation = [4, 5]
+print(TrialName)
 #############
 # Run model #
 #############
-O = LoadObserver("maps/"+World, Silent = not verbose)
+O = LoadObserver("stimuli/experiment_1/"+World, Silent = not verbose)
 Scene = TranslateState(Observation)
 Results = [-1]*Samples
 Entrance = [-1]*Samples

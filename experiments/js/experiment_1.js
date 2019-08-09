@@ -1,5 +1,6 @@
 var j = 0;
 var wrong_attempts = 0;
+var wrong_objective = 0;
 
 function make_slides(f) {
   var slides = {};
@@ -8,12 +9,13 @@ function make_slides(f) {
     name: "i0",
     start: function() {
         exp.startT = Date.now();
-        $(".start_over").hide();
+        $(".first_fail").hide();
+        $(".second_fail").hide();
     }
   });
 
   // Set up the introduction slides.
-  for (var i = 0; i < 8; i++) {
+  for (var i = 0; i < 9; i++) {
     slides["introduction_" + i] = slide({
       name: "introduction_" + i,
       start: function() {},
@@ -28,8 +30,9 @@ function make_slides(f) {
       $(".catch_error").hide();
 
       exp.question = ["How many corners are people walking to?",
-                      "Are people always on their way to a corner?",
-                      "Do people get to choose which door they walk through?",
+                      "Do people always drop their cookie crumbs on their path to/from a corner?",
+                      "Do people get to choose which door they enter through?",
+                      "Do people leave the room out of the same door they entered or the door closest to them?",
                       "Can people move diagonally?",
                       "What color are the walls?"];
 
@@ -53,18 +56,24 @@ function make_slides(f) {
         "<label><input type=\"radio\" name=\"question_2\" value=\"1\"/>No</label>" +
         "<label><input type=\"radio\" name=\"question_2\" value=\"-1\"/>Not sure</label>" +
         "</p>" +
-        "<p>" + exp.question[3] + "</p>" + 
+        "<p>" + exp.question[3] + "</p>" +
         "<p>" +
-        "<label><input type=\"radio\" name=\"question_3\" value=\"0\"/>Yes</label>" +
-        "<label><input type=\"radio\" name=\"question_3\" value=\"1\"/>No</label>" + 
+        "<label><input type=\"radio\" name=\"question_3\" value=\"0\"/>Same door</label>" +
+        "<label><input type=\"radio\" name=\"question_3\" value=\"1\"/>Closest door</label>" +
         "<label><input type=\"radio\" name=\"question_3\" value=\"-1\"/>Not sure</label>" +
         "</p>" +
-        "<p>" + exp.question[4] + "</p>" +
+        "<p>" + exp.question[4] + "</p>" + 
         "<p>" +
-        "<label><input type=\"radio\" name=\"question_4\" value=\"0\"/>White</label>" +
-        "<label><input type=\"radio\" name=\"question_4\" value=\"1\"/>Gray</label>" +
-        "<label><input type=\"radio\" name=\"question_4\" value=\"2\"/>Red</label>" +
+        "<label><input type=\"radio\" name=\"question_4\" value=\"0\"/>Yes</label>" +
+        "<label><input type=\"radio\" name=\"question_4\" value=\"1\"/>No</label>" + 
         "<label><input type=\"radio\" name=\"question_4\" value=\"-1\"/>Not sure</label>" +
+        "</p>" +
+        "<p>" + exp.question[5] + "</p>" +
+        "<p>" +
+        "<label><input type=\"radio\" name=\"question_5\" value=\"0\"/>White</label>" +
+        "<label><input type=\"radio\" name=\"question_5\" value=\"1\"/>Gray</label>" +
+        "<label><input type=\"radio\" name=\"question_5\" value=\"2\"/>Red</label>" +
+        "<label><input type=\"radio\" name=\"question_5\" value=\"-1\"/>Not sure</label>" +
         "</p>");
     },
     button: function() {
@@ -73,22 +82,31 @@ function make_slides(f) {
       exp.target_2 = $("input[name='question_2']:checked").val();
       exp.target_3 = $("input[name='question_3']:checked").val();
       exp.target_4 = $("input[name='question_4']:checked").val();
+      exp.target_5 = $("input[name='question_5']:checked").val();
 
       // If a participant fails to answer every question.
       if ((exp.target_0 === undefined) || (exp.target_1 === undefined) || (exp.target_2 === undefined) ||
-          (exp.target_3 === undefined) || (exp.target_4 === undefined)) {
+          (exp.target_3 === undefined) || (exp.target_4 === undefined) || (exp.target_5 === undefined)) {
           $(".catch_error").show();
       }
 
-      // If a participant answers any question incorrectly..
+      // If a participant answers any question incorrectly.
       else if ((exp.target_0 != "0") || (exp.target_1 != "0") || (exp.target_2 != "1") || 
-               (exp.target_3 != "1") || (exp.target_4 != "1")) {
-        $(".catch_error").hide();
-        wrong_attempts++;
-        exp.go(-8);
-        $(".bar").css('width', ((100/exp.nQs) + "%"));
-        exp.phase = 2;
-        $(".start_over").show();
+               (exp.target_3 != "0") || (exp.target_4 != "1") || (exp.target_5 != "1")) {
+        if (wrong_attempts == 1) { 
+          exp.go(-10);
+          $(".warning").hide();
+          $(".first_fail").hide();
+          $(".second_fail").show();
+        }
+        else {
+          $(".catch_error").hide();
+          wrong_attempts++;
+          exp.go(-10);
+          $(".bar").css('width', ((100/exp.nQs) + "%"));
+          exp.phase = 2;
+          $(".first_fail").show();
+        }
       }
       else {
         exp.catch_trials.push({
@@ -102,6 +120,8 @@ function make_slides(f) {
           "target_3": exp.target_3,
           "question_4": exp.question[4],
           "target_4": exp.target_4,
+          "question_5": exp.question[5],
+          "target_5": exp.target_5,
           "wrong_attempts": wrong_attempts
         });
         exp.go();
@@ -112,12 +132,29 @@ function make_slides(f) {
   // Set up a trial slide.
   function start() {
     $(".trial_error").hide();
+    $(".objective_error").hide();
     $(".slider_row").remove();
 
     $(".prompt").html("Consider the following new room and person.");
-    $(".stimulus").html("<img style=\"height:250px;width:auto;border:1px solid black;\" " +
-                        "src=\"../stimuli/experiment_1/" + exp.trials[j] + "\"></img>");
-
+    $(".stimulus").html("<div style=\"display:inline-block;margin-right:50px;vertical-align:top;\">" +
+                        // "<img style=\"height:250px;width:auto;border:1px solid black;\" " +
+                        "<img style=\"height:250px;width:auto;\" " +
+                        "src=\"../stimuli/experiment_1/" + exp.trials[j] + "\"></img>" +
+                        "</div>" +
+                        "<div align=\"center\" style=\"display:inline-block;\">" +
+                        "<p style=\"font-size:16px;font-weight:bold;\">Which corner is farthest from Door 1<br>" +
+                        "(there may be more than one)?</p>" +
+                        "<label>" +
+                        "<input type=\"radio\" name=\"objective\" value=\"A\"/ style=\"margin: 0 5px 0 0;\">" +
+                        "<img src=\"../stimuli/experiment_1/A.png\" alt=\"\" style=\"width:35px;height:auto;\">" +
+                        "</label>" +
+                        "<label><input type=\"radio\" name=\"objective\" value=\"B\"/>" +
+                        "<img src=\"../stimuli/experiment_1/B.png\" alt=\"\" style=\"width:35px;height:auto;\">" +
+                        "</label>" +
+                        "<label><input type=\"radio\" name=\"objective\" value=\"C\"/>" + 
+                        "<img src=\"../stimuli/experiment_1/C.png\" alt=\"\" style=\"width:35px;height:auto;\">" +
+                        "</label>" +
+                        "</div>");
 
     exp.questions = ["Which door did they come from?",
                      "Which corner is the person going for?"];
@@ -215,10 +252,23 @@ function make_slides(f) {
 
   // Run when the "Continue" button is hit on a slide.
   function button() {
+    exp.objective = $("input[name='objective']:checked").val();
+    incorrect = true;
+    for (i = 0; i < exp.furthest_corner[j].length; i++) {
+      if (exp.objective == exp.furthest_corner[j][i]) {
+        incorrect = false;
+      }
+    }
     if ((exp.sliderPost[0] === undefined) || (exp.sliderPost[1] === undefined) || 
         (exp.sliderPost[2] === undefined) || (exp.sliderPost[3] === undefined) ||
-        (exp.sliderPost[4] === undefined) || (exp.sliderPost[5] === undefined)) { 
-        $(".trial_error").show(); 
+        (exp.sliderPost[4] === undefined) || (exp.sliderPost[5] === undefined) ||
+        (exp.objective === undefined)) { 
+        $(".trial_error").show();
+    }
+    else if (incorrect) {
+      $(".trial_error").hide();
+      $(".objective_error").show();
+      wrong_objective++;
     }
     else {
         exp.data_trials.push({
@@ -229,9 +279,11 @@ function make_slides(f) {
           "3": exp.sliderPost[4],
           "A": exp.sliderPost[1],
           "B": exp.sliderPost[3],
-          "C": exp.sliderPost[5]
+          "C": exp.sliderPost[5],
+          "wrong_objective": wrong_objective
         });
         j++;
+        wrong_objective = 0;
         exp.go();
     }
   }
@@ -310,6 +362,7 @@ function init() {
   // Set up trial slide information.
   trials = trials();
   exp.trials = _.pluck(trials, "name");
+  exp.furthest_corner = _.pluck(trials, "furthest_corner");
   exp.num_trials = exp.trials.length;
   $(".num_trials").html(exp.num_trials);
   exp.num_doors = _.pluck(trials, "num_doors");
@@ -330,8 +383,19 @@ function init() {
   };
 
   // Stitch together the blocks of the experiment.
-  exp.structure = ["i0", "introduction_0", "introduction_1", "introduction_2", "introduction_3",
-                   "introduction_4", "introduction_5", "introduction_6", "introduction_7", "catch_trial"]; 
+  exp.structure = [
+    "i0", 
+    "introduction_0", 
+    "introduction_1", 
+    "introduction_2", 
+    "introduction_3", 
+    "introduction_4",
+    "introduction_5", 
+    "introduction_6", 
+    "introduction_7", 
+    "introduction_8", 
+    "catch_trial"
+  ]; 
   for (var k = 1; k <= exp.num_trials; k++) {
     exp.structure.push("trial" + k);
   }
