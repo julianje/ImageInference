@@ -31,3 +31,6 @@ P(actions | scene) = sum(P(actions, rewards | scene)) = sum(P(actions | rewards,
 - [ ] Run experiment_1
 - [ ] Analyze experiment_1 results
 - [ ] Design experiment_2
+
+- Compute correlation between number of model samples for minimal error and error between participant data and model predictions
+	- Make a histogram of samples/paths with positive probability (a bunch of paths with even prob. means more participant uncertainty)

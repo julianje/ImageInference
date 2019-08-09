@@ -9,7 +9,6 @@ output:
 
 ```{r setup, echo=FALSE}
 # Set the working directory.
-path <- "D:/Research/ImageInference/"
 knitr::opts_knit$set(root.dir=normalizePath("../.."))
 
 # Turn off compile messages and warnings.
@@ -18,336 +17,37 @@ knitr::opts_chunk$set(message=FALSE, warning=FALSE)
 
 ```{r echo=FALSE}
 # Import R libraries.
+library(boot)
 library(corrplot)
 library(jsonlite)
 library(tidyverse)
 ```
-<!--
-# pilot_0
 
-Some of the supplemental information collected from participants was lost due to lack of sanitizing inputs:
+# Pilot
 
-- Participant 5YIBOVS: Questionnaire cut off after "problems". Reconstructing form with blank entries.
-- Participant Gx3kOR2: Questionnaire cut off in the middle of their response in "problems". Ending response at current location and reconstructing form with blank entries.
-- Participant 9UhOHcJ: Questionnaire cut off in the middle of their response in "problems". Ending response at current location and reconstructing form with blank entries.
+#### pilot_4
 
-```{r eval=FALSE, include=FALSE}
+Swapped out the cookie for I thought I had the wrong stimuli for `PX_PX_0`, but it turns out that was the right one. I ended up cancelling the task at $n=14$.
+
+#### pilot_5
+
+
+
+```{r, echo=FALSE}
+# Set up which pilot is being analyzed.
+pilot_path = "data/experiment_1/pilot_5"
+
 # Read in the participant data (after manually removing errors).
-data_0 <- read_csv("data/experiment_1/pilot_0/clean_data.csv", quote="~")
+data_0 <- read_csv(file.path(pilot_path, "ImageInference_Exp1.csv"), quote="~")
 
 # Read in the MTurk results file.
-mturk_results = read_csv("data/experiment_1/pilot_0/mturk_results.csv", col_names=TRUE) %>%
+mturk_results = read_csv(file.path(pilot_path, "mturk_results.csv"), col_names=TRUE) %>%
   mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode)))
 
 # Filter out any duplicate database entries based on the MTurk results file.
-duplicates <- setdiff(data_0$UniqueId, mturk_results$Answer.surveycode)
-data_1 <- data_0 %>%
-  filter(!(UniqueId %in% duplicates))
-
-# Convert the JSON string into JSON.
-data_2 = lapply(data_1$Results, fromJSON)
-
-# Extract the trial information for each participant and stack them.
-data_4 = tibble()
-for (p in 1:length(data_2)) {
-  # Trim the layout and add the participant ID back in.
-  data_3 = data_2[p][[1]]$trials %>%
-    as.data.frame() %>%
-    mutate(layout=gsub("_no-grid.png", "", layout), unique_id=data_1$UniqueId[p])
-
-  # Stack the trial information for the current participant.
-  data_4 = rbind(data_4, data_3)
-}
-
-# Write the preprocessed data.
-# write_csv(data_4, "data/experiment_1/pilot_0/data.csv")
-```
-
-## Goal Predictions
-
-```{r eval=FALSE, include=FALSE}
-# Read in the goal judgments and predictions.
-model_0 = read_csv("data/model/predictions/Manhattan/goal_predictions.csv")
-
-# Perform some basic preprocessing and then z-score the model predictions.
-model_1 = model_0 %>%
-  select(-Goal) %>%
-  rename(goal=GoalLetter, layout=Trial, model=Probability) %>%
-  mutate(z_model=scale(model))
-
-# Select the goal judgments, norm them, then z-score within participants.
-data_5 = data_4 %>%
-  select(unique_id, layout, A, B, C) %>%
-  mutate(norm_A=A/(A+B+C), norm_B=B/(A+B+C), norm_C=C/(A+B+C)) %>%
-  select(-A, -B, -C) %>%
-  rename(A=norm_A, B=norm_B, C=norm_C) %>%
-  gather(goal, human, A, B, C) %>%
-  group_by(unique_id) %>%
-  mutate(z_human=scale(human)) %>%
-  ungroup() %>%
-  group_by(layout, goal) %>%
-  summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
-  left_join(model_1)
-
-# Plot the goal comparison.
-data_5 %>%  
-  ggplot(aes(x=z_model, y=mean_z_human, label=layout)) +
-  geom_point() +
-  geom_smooth(method="lm") +
-  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
-```
-
-The correlation is `r cor(data_5$z_model, data_5$mean_z_human, method="pearson")`. If we break down the results by goal, we get:
-
-```{r eval=FALSE, include=FALSE}
-data_5 %>%
-  ggplot(aes(x=z_model, y=mean_z_human, label=layout)) +
-  geom_point() +
-  geom_smooth(method="lm") +
-  facet_wrap(~goal) +
-  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
-```
-
-```{r eval=FALSE, include=FALSE}
-# Extract the maps where the model predictions and human judgments differ
-# by more than 1 standard deviation.
-unique(data_5$layout[abs(data_5$mean_z_human-data_5$z_model[,1]) > 1])
-```
-
-## Entrance Predictions
-
-```{r eval=FALSE, include=FALSE}
-# Read in the entrance predictions.
-model_0 = read_csv("data/model/predictions/Manhattan/entrance_predictions.csv")
-
-# Stitch the entrance mapping to the predictions and do some preprocessing.
-model_1 = model_0 %>%
-  left_join(read_csv("data/model/predictions/entrance_mapping.csv")) %>%
-  mutate(Probability=ifelse(is.na(Probability), 0, Probability)) %>%
-  select(-Entrance) %>%
-  rename(layout=TrialName, entrance=DoorNumber, model=Probability) %>%
-  mutate(entrance=as.character(entrance), z_model=scale(model))
-
-# Select the entrance judgments, norm them, then z-score within participants.
-data_6 = data_4 %>%
-  select(unique_id, layout, `1`, `2`, `3`) %>%
-  gather(entrance, human, `1`, `2`, `3`) %>%
-  mutate(human=ifelse(human==-1, 0, human)) %>%
-  spread(entrance, human) %>%
-  mutate(norm_1=`1`/(`1`+`2`+`3`), norm_2=`2`/(`1`+`2`+`3`), norm_3=`3`/(`1`+`2`+`3`)) %>%
-  select(-`1`, -`2`, -`3`) %>%
-  rename(`1`=norm_1, `2`=norm_2, `3`=norm_3) %>%
-  gather(entrance, human, `1`, `2`, `3`) %>%
-  group_by(unique_id) %>%
-  mutate(z_human=scale(human)) %>%
-  ungroup() %>%
-  group_by(layout, entrance) %>%
-  summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
-  left_join(model_1)
-
-# Omit missing data from trials that had only 1 or 2 entrances.
-data_7 = data_6 %>%
-  na.omit()
-
-# Plot the entrance comparison.
-data_7 %>%
-  ggplot(aes(x=z_model, y=mean_z_human, label=layout)) +
-  geom_point() +
-  geom_smooth(method="lm") +
-  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
-```
-
-The Pearson correlation is `r cor(data_7$z_model, data_7$mean_z_human, method="pearson")`.If we break down the results by entrance, we get:
-
-```{r eval=FALSE, include=FALSE}
-data_7 %>%
-  ggplot(aes(x=z_model, y=mean_z_human, label=layout)) +
-  geom_point() +
-  geom_smooth(method="lm") +
-  facet_wrap(~entrance) +
-  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
-```
-
-# pilot_1
-
-One participant used their worker ID as the survey code. `UN_NX_0` also had the wrong corner labels.
-
-```{r eval=FALSE, include=FALSE}
-# Read in the participant data (after manually removing errors).
-data_0 <- read_csv("data/experiment_1/pilot_1/raw_data.csv", quote="~")
-
-# Read in the MTurk results file.
-mturk_results = read_csv("data/experiment_1/pilot_1/mturk_results.csv", col_names=TRUE) %>%
-  mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode)))
-
-# Convert the JSON string into JSON.
-data_1 = lapply(data_0$Results, fromJSON)
-
-# Extract the trial information for each participant and stack them.
-data_3 = tibble()
-for (p in 1:length(data_1)) {
-  # Trim the map and add the participant ID back in.
-  data_2 = data_1[p][[1]]$trials %>%
-    as.data.frame() %>%
-    mutate(map=gsub("_no-grid.png", "", map), unique_id=data_0$UniqueId[p])
-
-  # Stack the trial information for the current participant.
-  data_3 = rbind(data_3, data_2)
-}
-
-# Write the preprocessed data.
-# write_csv(data_3, "data/experiment_1/pilot_1/data.csv")
-```
-
-## Goal Predictions
-
-```{r eval=FALSE, include=FALSE}
-# Read in the goal judgments and predictions.
-model_0 = read_csv("data/model/predictions/Manhattan/goal_predictions.csv")
-
-# Perform some basic preprocessing and then z-score the model predictions.
-model_1 = model_0 %>%
-  select(-Goal) %>%
-  rename(goal=GoalLetter, map=Trial, model=Probability) %>%
-  mutate(z_model=scale(model))
-
-# Select the goal judgments, norm them, then z-score within participants.
-data_4 = data_3 %>%
-  select(unique_id, map, A, B, C) %>%
-  mutate(norm_A=A/(A+B+C), norm_B=B/(A+B+C), norm_C=C/(A+B+C)) %>%
-  select(-A, -B, -C) %>%
-  rename(A=norm_A, B=norm_B, C=norm_C) %>%
-  gather(goal, human, A, B, C) %>%
-  group_by(unique_id) %>%
-  mutate(z_human=scale(human)) %>%
-  ungroup() %>%
-  group_by(map, goal) %>%
-  summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
-  left_join(model_1)
-
-# Plot the goal comparison.
-data_4 %>%  
-  ggplot(aes(x=z_model, y=mean_z_human, label=map)) +
-  geom_point() +
-  geom_smooth(method="lm") +
-  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
-```
-
-The correlation is `r cor(data_4$z_model, data_4$mean_z_human, method="pearson")`. If we break down the results by goal, we get:
-
-```{r eval=FALSE, include=FALSE}
-data_4 %>%
-  ggplot(aes(x=z_model, y=mean_z_human, label=map)) +
-  geom_point() +
-  geom_smooth(method="lm") +
-  facet_wrap(~goal) +
-  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
-```
-
-```{r eval=FALSE, include=FALSE}
-# Extract the maps where the model predictions and human judgments differ
-# by more than 1 standard deviation.
-unique(data_4$map[abs(data_4$mean_z_human-data_4$z_model[,1]) > 1])
-```
-
-## Entrance Predictions
-
-```{r eval=FALSE, include=FALSE}
-# Read in the entrance predictions.
-model_0 = read_csv("data/model/predictions/Manhattan/entrance_predictions.csv")
-
-# Stitch the entrance mapping to the predictions and do some preprocessing.
-model_1 = model_0 %>%
-  left_join(read_csv("data/model/predictions/entrance_mapping.csv")) %>%
-  mutate(Probability=ifelse(is.na(Probability), 0, Probability)) %>%
-  select(-Entrance) %>%
-  rename(map=TrialName, entrance=DoorNumber, model=Probability) %>%
-  mutate(entrance=as.character(entrance), z_model=scale(model))
-
-# Select the entrance judgments, norm them, then z-score within participants.
-data_5 = data_3 %>%
-  select(unique_id, map, `1`, `2`, `3`) %>%
-  gather(entrance, human, `1`, `2`, `3`) %>%
-  mutate(human=ifelse(human==-1, 0, human)) %>%
-  spread(entrance, human) %>%
-  mutate(norm_1=`1`/(`1`+`2`+`3`), norm_2=`2`/(`1`+`2`+`3`), norm_3=`3`/(`1`+`2`+`3`)) %>%
-  select(-`1`, -`2`, -`3`) %>%
-  rename(`1`=norm_1, `2`=norm_2, `3`=norm_3) %>%
-  gather(entrance, human, `1`, `2`, `3`) %>%
-  group_by(unique_id) %>%
-  mutate(z_human=scale(human)) %>%
-  ungroup() %>%
-  group_by(map, entrance) %>%
-  summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
-  left_join(model_1)
-
-# Omit missing data from trials that had only 1 or 2 entrances.
-data_6 = data_5 %>%
-  na.omit()
-
-# Plot the entrance comparison.
-data_6 %>%
-  ggplot(aes(x=z_model, y=mean_z_human, label=map)) +
-  geom_point() +
-  geom_text(vjust=1.5) +
-  geom_smooth(method="lm") +
-  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
-```
-
-The Pearson correlation is `r cor(data_6$z_model, data_6$mean_z_human, method="pearson")`.If we break down the results by entrance, we get:
-
-```{r eval=FALSE, include=FALSE}
-data_6 %>%
-  ggplot(aes(x=z_model, y=mean_z_human, label=map)) +
-  geom_point() +
-  geom_smooth(method="lm") +
-  facet_wrap(~entrance) +
-  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
-```
-
--->
-# pilot_2
-
-```{r, echo=FALSE}
-# Read in the participant data (after manually removing errors).
-data_0 <- read_csv("data/experiment_1/pilot_2/raw_data.csv", quote="~")
-data_0 <- read_csv("C:/Users/Michael Lopez-Brau/Downloads/joan.csv", quote="~")
-
-# Read in the MTurk results file.
-mturk_results = read_csv("data/experiment_1/pilot_1/mturk_results.csv", col_names=TRUE) %>%
-  mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode)))
+# duplicates <- setdiff(data_0$UniqueId, mturk_results$Answer.surveycode)
+# data_1 <- data_0 %>%
+#   filter(!(UniqueId %in% c("ll email completio", "yYCyou3")))
 
 # Convert the JSON string into JSON.
 data_1 = lapply(data_0$Results, fromJSON)
@@ -366,10 +66,267 @@ for (p in 1:length(data_1)) {
 }
 
 # Write the preprocessed data.
-# write_csv(data_3, "data/experiment_1/pilot_2/data.csv")
+write_csv(data_3, file.path(pilot_path, "data.csv"))
 ```
 
-```{r}
+## Goal Predictions
+
+```{r, fig.align="center"}
+# Read in the preprocessed data.
+data_3 = read_csv(file.path(pilot_path, "data.csv"))
+
+# Select and normalize the goal judgments.
+data_4 = data_3 %>%
+  filter(wrong_attempts < 2) %>%
+  # filter(!(unique_id %in% c("3bcOC7j", "moLWXPA", "PoNIgep", "qfVE6hb", "yYCyou3"))) %>%
+  filter(!(unique_id %in% c("3bcOC7j", "moLWXPA", "OEdznH0", "PoNIgep", "qfVE6hb", "S9Y8JeP", "VHNf4qQ", "yYCyou3"))) %>%
+  select(unique_id, map, A, B, C) %>%
+  gather(goal, human, A, B, C) %>%
+  left_join(do(., summarize(group_by(., unique_id, map),
+                            total_human=sum(human)))) %>%
+  mutate(human=human/total_human) %>%
+  select(-total_human)
+
+# Define the bootstrap function for the bootstrap statistic.
+compute_mean = function(data, indices) {
+  return(mean(data[indices]))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_mean,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CIs.
+ci = data.frame()
+for (m in unique(data_4$map)) {
+    # Compute the bootstrap for each dependent measure.
+    A_bootstrap = compute_bootstrap(filter(data_4, map==m, goal=="A")$human)
+    B_bootstrap = compute_bootstrap(filter(data_4, map==m, goal=="B")$human)
+    C_bootstrap = compute_bootstrap(filter(data_4, map==m, goal=="C")$human)
+    
+    # Store the bootstrapped 95% CIs for this pair.
+    ci = rbind(ci, data.frame(map=rep(m, 3),
+                              goal=c("A", "B", "C"),
+                              lower=c(A_bootstrap[4], B_bootstrap[4], C_bootstrap[4]),
+                              upper=c(A_bootstrap[5], B_bootstrap[5], C_bootstrap[5])))
+}
+
+# Read in the goal predictions.
+model_0 = read_csv("data/model/predictions/Manhattan/goal_predictions.csv")
+
+# Perform some basic preprocessing and then z-score the model predictions.
+model_1 = model_0 %>%
+  select(-Goal) %>%
+  rename(goal=GoalLetter, map=Trial, model=Probability) %>%
+  mutate(z_model=scale(model))
+
+# Merge the human and model data. # Join the bootstrapped 95% CIs with the normalized participant judgments.
+data_5 = data_4 %>%
+  group_by(unique_id) %>%
+  mutate(z_human=scale(human)) %>%
+  ungroup() %>%
+  group_by(map, goal) %>%
+  summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
+  left_join(ci) %>%
+  left_join(model_1)
+
+# Plot the goal comparison.
+plot_0 = data_5 %>%
+  ggplot(aes(x=model, y=mean_human, label=map)) +
+  geom_point(aes(color=substr(map, 0, 2))) +
+  # geom_text(vjust=-1.0) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  scale_color_discrete(name="Goal") + 
+  theme_classic() +
+  theme(plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_0
+```
+
+The correlation is `r cor(data_5$model, data_5$mean_human, method="pearson")`. If we split up the data by trial, we get:
+
+```{r, fig.align="center"}
+# Plot goal inferences by trial.
+plot_1 = data_5 %>%
+  gather(type, value, mean_human, model) %>%
+  ggplot(aes(x=goal, y=value, group=type)) +
+  geom_point(aes(color=type)) +
+  geom_line(aes(color=type)) + 
+  geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.2) +
+  facet_wrap(~map) +
+  xlab("Goal") +
+  ylab("Value") +
+  scale_color_discrete(name="Type",
+                       limits=c("mean_human", "model"),
+                       labels=c("Human", "Model")) +
+  theme_classic() +
+  theme(legend.title=element_text(hjust=0.5))
+plot_1
+```
+
+## Entrance Predictions
+
+```{r, fig.align="center"}
+# Select and normalize the entrance judgments.
+data_6 = data_3 %>%
+  filter(wrong_attempts < 2) %>%
+  # filter(!(unique_id %in% c("3bcOC7j", "moLWXPA", "PoNIgep", "qfVE6hb", "yYCyou3"))) %>%
+  filter(!(unique_id %in% c("3bcOC7j", "moLWXPA", "OEdznH0", "PoNIgep", "qfVE6hb", "S9Y8JeP", "yYCyou3"))) %>%
+  filter(!grepl("ND", map)) %>%
+  select(unique_id, map, `1`, `2`, `3`) %>%
+  gather(entrance, human, `1`, `2`, `3`) %>%
+  filter(human!=-1) %>%
+  left_join(do(., summarize(group_by(., unique_id, map),
+                            total_human=sum(human)))) %>%
+  mutate(human=human/total_human) %>%
+  select(-total_human)
+
+# Define the bootstrap function for the bootstrap statistic.
+compute_mean = function(data, indices) {
+  return(mean(data[indices]))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_mean,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CIs.
+ci = data.frame()
+for (m in unique(data_6$map)) {
+    # Compute the bootstrap for each dependent measure.
+    bootstrap_1 = compute_bootstrap(filter(data_6, map==m, entrance=="1")$human)
+    bootstrap_2 = compute_bootstrap(filter(data_6, map==m, entrance=="2")$human)
+    if (length(unique(filter(data_6, map==m)$entrance)) == 3) {
+      bootstrap_3 = compute_bootstrap(filter(data_6, map==m, entrance=="3")$human)
+    }
+    
+    # Store the bootstrapped 95% CIs for this pair.
+    if (length(unique(filter(data_6, map==m)$entrance)) == 3) {
+      ci = rbind(ci, data.frame(map=rep(m, 3),
+                                entrance=c("1", "2", "3"),
+                                lower=c(bootstrap_1[4], bootstrap_2[4], bootstrap_3[4]),
+                                upper=c(bootstrap_1[5], bootstrap_2[5], bootstrap_3[5])))
+    }
+    else {
+      ci = rbind(ci, data.frame(map=rep(m, 2),
+                                entrance=c("1", "2"),
+                                lower=c(bootstrap_1[4], bootstrap_2[4]),
+                                upper=c(bootstrap_1[5], bootstrap_2[5])))
+    }
+}
+
+# Read in the entrance predictions.
+model_2 = read_csv("data/model/predictions/Manhattan/entrance_predictions.csv")
+
+# Stitch the entrance mapping to the predictions and do some preprocessing.
+model_3 = model_2 %>%
+  right_join(read_csv("data/model/predictions/Manhattan/entrance_mapping.csv")) %>%
+  mutate(Probability=ifelse(is.na(Probability), 0, Probability)) %>%
+  select(-Entrance) %>%
+  rename(map=TrialName, entrance=DoorNumber, model=Probability) %>%
+  mutate(entrance=as.character(entrance), z_model=scale(model))
+
+# Select the entrance judgments, norm them, then z-score within participants.
+data_7 = data_6 %>%
+  group_by(unique_id) %>%
+  mutate(z_human=scale(human)) %>%
+  ungroup() %>%
+  group_by(map, entrance) %>%
+  summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
+  left_join(ci) %>%
+  left_join(model_3)
+
+# Plot the entrance comparison.
+plot_2 = data_7 %>%
+  ggplot(aes(x=model, y=mean_human, label=map)) +
+  geom_point(aes(color=substr(map, 0, 2))) +
+  # geom_text(vjust=-1.0) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  scale_color_discrete(name="Entrance") +
+  theme_classic() + 
+  theme(plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_2
+```
+
+The Pearson correlation is `r cor(data_7$z_model, data_7$mean_z_human, method="pearson")`. If we split up the data by trial, we get:
+
+```{r, fig.align="center"}
+# Plot entrance inferences by trial.
+plot_3 = data_7 %>%
+  gather(type, value, mean_human, model) %>%
+  ggplot(aes(x=entrance, y=value, group=type)) +
+  geom_point(aes(color=type)) +
+  geom_line(aes(color=type)) +
+  geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.2) +
+  facet_wrap(~map) +
+  xlab("Entrance") +
+  ylab("Value") +
+  scale_color_discrete(name="Type",
+                       limits=c("mean_human", "model"),
+                       labels=c("Human", "Model")) +
+  theme_classic() +
+  theme(legend.title=element_text(hjust=0.5))
+plot_3
+```
+
+Finally, we can plot the goal and entrance inferences together:
+
+```{r, fig.align="center"}
+# Merge the two inferences.
+data_8 = data_5 %>%
+  mutate(type="goal", inference=goal) %>%
+  select(-goal) %>%
+  rbind(select(mutate(data_7, type="entrance", inference=entrance), -entrance))
+
+plot_4 = data_8 %>%
+  ggplot(aes(x=model, y=mean_human, label=map)) +
+  geom_point(aes(color=type)) +
+  # geom_text(vjust=-1.0, hjust=-1.0) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle("Model Predictions vs. Participant Judgments") +
+  xlab("Model Predictions") +
+  ylab("Participant Judgments") +
+  scale_color_discrete(name="Type",
+                       limits=c("entrance", "goal"),
+                       labels=c("Entrance", "Goal")) +
+  theme_classic() +
+  theme(legend.title=element_text(hjust=0.5))
+plot_4
+```
+
+
+```{r, eval=FALSE, include=FALSE}
+data_4 %>% 
+  rename(type=goal) %>% 
+  rbind(rename(data_5, type=entrance)) %>% 
+  ggplot(aes(x=model, y=mean_human, label=map)) + 
+  geom_point(aes(color=type)) +
+  geom_smooth(method="lm") + 
+  # ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  scale_color_discrete(name="Type") +
+  theme_classic()
+
 library(corrplot)
 data_3 %>%
   filter(map=="ND_PX_1") %>%
@@ -385,154 +342,31 @@ data_3 %>%
   # cor()
   # 
   # corrplot()
+```
 
-data_3 %>%
-  # rbind(joan) %>%
-  select(map, A, B, C, unique_id, wrong_attempts) %>%
-  filter(wrong_attempts < 2) %>%
-  gather(goal, value, A, B, C) %>%
-  # filter(map=="DX_UN_0") %>%
-  # filter(map=="ND_PX_0") %>%
-  filter(map=="ND_PX_1") %>%
-  ggplot(aes(x=goal, y=value)) + 
+Start putting stimuli here with:
+1. Model predictions
+2. Participant judgments
+
+![Caption](../../stimuli/experiment_1/DX_DX_0.png)
+
+```{r}
+data_8 %>%
+  filter(map=="DX_DX_0") %>%
+  gather(source, value, mean_human, model) %>%
+  ggplot(aes(x=inference, y=value, group=source, color=source)) +
   geom_point() + 
-  facet_wrap(~unique_id)
-
-data_3 = data_3 %>% 
-  filter(wrong_attempts < 2)
-data_4 %>%
-  gather(type, value, mean_z_human, z_model) %>%
-  ggplot(aes(x=goal, y=value, group=type)) +
-  geom_point(aes(color=type)) +
-  geom_line(aes(color=type)) + 
-  facet_wrap(~map) +
-  theme_classic()
-```
-
-## Goal Predictions
-
-```{r, fig.align="center"}
-# Read in the goal judgments and predictions.
-model_0 = read_csv("data/model/predictions/Manhattan_current/goal_predictions.csv")
-
-# Perform some basic preprocessing and then z-score the model predictions.
-model_1 = model_0 %>%
-  select(-Goal) %>%
-  rename(goal=GoalLetter, map=Trial, model=Probability) %>%
-  mutate(z_model=scale(model))
-
-# Select the goal judgments, norm them, then z-score within participants.
-data_4 = data_3 %>%
-  select(unique_id, map, A, B, C) %>%
-  mutate(norm_A=A/(A+B+C), norm_B=B/(A+B+C), norm_C=C/(A+B+C)) %>%
-  select(-A, -B, -C) %>%
-  rename(A=norm_A, B=norm_B, C=norm_C) %>%
-  gather(goal, human, A, B, C) %>%
-  group_by(unique_id) %>%
-  mutate(z_human=scale(human)) %>%
-  ungroup() %>%
-  group_by(map, goal) %>%
-  summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
-  left_join(model_1)
-
-# Plot the goal comparison.
-data_4 %>%
-  # filter(!(map %in% c("DX_UN_0", "ND_PX_0", "ND_PX_1"))) %>%
-  # filter(!(map %in% c("DX_UN_0", "ND_PX_1"))) %>%
-  ggplot(aes(x=z_model, y=mean_z_human, label=map)) +
-  geom_point() +
-  # geom_text(vjust=-1.0) +
-  geom_smooth(method="lm", se=FALSE, linetype="dashed") +
-  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
-```
-
-The correlation is `r cor(data_4$z_model, data_4$mean_z_human, method="pearson")`. If we break down the results by goal, we get:
-
-```{r fig.align="center"}
-data_4 %>%
-  # filter(!(map %in% c("DX_UN_0", "ND_PX_0", "ND_PX_1"))) %>%
-  ggplot(aes(x=z_model, y=mean_z_human, label=map)) +
-  geom_point() +
-  # geom_text(vjust=-1.0) +
-  geom_smooth(method="lm") +
-  facet_wrap(~goal) +
-  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
-```
-
-```{r eval=FALSE, include=FALSE}
-# Extract the maps where the model predictions and human judgments differ
-# by more than 1 standard deviation.
-unique(data_4$map[abs(data_4$mean_z_human-data_4$z_model[,1]) > 1])
-```
-
-## Entrance Predictions
-
-```{r, fig.align="center"}
-# Read in the entrance predictions.
-model_0 = read_csv("data/model/predictions/Manhattan/entrance_predictions.csv")
-
-# Stitch the entrance mapping to the predictions and do some preprocessing.
-model_1 = model_0 %>%
-  left_join(read_csv("data/model/predictions/entrance_mapping.csv")) %>%
-  mutate(Probability=ifelse(is.na(Probability), 0, Probability)) %>%
-  select(-Entrance) %>%
-  rename(map=TrialName, entrance=DoorNumber, model=Probability) %>%
-  mutate(entrance=as.character(entrance), z_model=scale(model))
-
-# Select the entrance judgments, norm them, then z-score within participants.
-data_5 = data_3 %>%
-  select(unique_id, map, `1`, `2`, `3`) %>%
-  gather(entrance, human, `1`, `2`, `3`) %>%
-  mutate(human=ifelse(human==-1, 0, human)) %>%
-  spread(entrance, human) %>%
-  mutate(norm_1=`1`/(`1`+`2`+`3`), norm_2=`2`/(`1`+`2`+`3`), norm_3=`3`/(`1`+`2`+`3`)) %>%
-  select(-`1`, -`2`, -`3`) %>%
-  rename(`1`=norm_1, `2`=norm_2, `3`=norm_3) %>%
-  gather(entrance, human, `1`, `2`, `3`) %>%
-  group_by(unique_id) %>%
-  mutate(z_human=scale(human)) %>%
-  ungroup() %>%
-  group_by(map, entrance) %>%
-  summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
-  left_join(model_1)
-
-# Omit missing data from trials that had only 1 or 2 entrances.
-data_6 = data_5 %>%
-  na.omit()
-
-# Plot the entrance comparison.
-data_6 %>%
-  ggplot(aes(x=z_model, y=mean_z_human, label=map)) +
-  geom_point() +
-  # geom_text(vjust=-1.0) +
-  geom_smooth(method="lm") +
-  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
-```
-
-The Pearson correlation is `r cor(data_6$z_model, data_6$mean_z_human, method="pearson")`.If we break down the results by entrance, we get:
-
-```{r, fig.align="center"}
-data_6 %>%
-  ggplot(aes(x=z_model, y=mean_z_human, label=map)) +
-  geom_point() +
-  geom_text(vjust=-1.0) +
-  geom_smooth(method="lm") +
-  facet_wrap(~entrance) +
-  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5))
+  geom_line() +
+  geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.2) +
+  facet_wrap(~factor(type,
+                     levels=c("entrance", "goal"), 
+                     labels=c("Entrance", "Goal")), 
+             scale="free_x") +
+  xlab("Feature") +
+  ylab("Inference") +
+  scale_color_discrete(name="Source",
+                       limits=c("mean_human", "model"),
+                       labels=c("Human", "Model")) +
+  theme_classic() +
+  theme(legend.title=element_text(hjust=0.5))
 ```
