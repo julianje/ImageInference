@@ -86,7 +86,7 @@ Observation = [4, 7]
 TrialName = "PX_PX_0"
 World = "PX_PX_0"
 Doors = [[17, 6], [105, 116], [34, 33]]
-Observation = [5, 5]
+Observation = [4, 4]
 
 TrialName = "PX_UN_0"
 World = "PX_UN_0"
