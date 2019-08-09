@@ -22,7 +22,7 @@ if __name__ == "__main__":
 		{"map": "NX_UN_0", "doors": "64 65-106 117-56 55", "observation": "4 7"},
 		{"map": "PX_DX_0", "doors": "16 5-106 117-45 44", "observation": "6 2"},
 		{"map": "PX_NX_0", "doors": "64 65-106 117-67 66", "observation": "4 7"},
-		{"map": "PX_PX_0", "doors": "17 6-105 116-34 33", "observation": "5 5"},
+		{"map": "PX_PX_0", "doors": "17 6-105 116-34 33", "observation": "4 4"},
 		{"map": "PX_UN_0", "doors": "53 54-97 98-56 55", "observation": "6 7"},
 		{"map": "UN_DX_0", "doors": "16 5-56 55", "observation": "6 5"},
 		{"map": "UN_NX_0", "doors": "18 7-78 77", "observation": "7 7"},
