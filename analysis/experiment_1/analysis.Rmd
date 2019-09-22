@@ -24,25 +24,27 @@ library(tidyverse)
 ```
 
 # Pilot
-
+<!--
 #### pilot_4
 
 Swapped out the cookie for I thought I had the wrong stimuli for `PX_PX_0`, but it turns out that was the right one. I ended up cancelling the task at $n=14$.
 
 #### pilot_5
 
+Revised the introduction. 
 
-
+#### pilot_6
+-->
 ```{r, echo=FALSE}
 # Set up which pilot is being analyzed.
-pilot_path = "data/experiment_1/pilot_5"
+pilot_path = "data/experiment_1/data_0"
 
 # Read in the participant data (after manually removing errors).
-data_0 <- read_csv(file.path(pilot_path, "ImageInference_Exp1.csv"), quote="~")
+data_0 <- read_csv(file.path(pilot_path, "raw_data.csv"), quote="~")
 
 # Read in the MTurk results file.
-mturk_results = read_csv(file.path(pilot_path, "mturk_results.csv"), col_names=TRUE) %>%
-  mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode)))
+# mturk_results = read_csv(file.path(pilot_path, "mturk_results.csv"), col_names=TRUE) %>%
+#   mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode)))
 
 # Filter out any duplicate database entries based on the MTurk results file.
 # duplicates <- setdiff(data_0$UniqueId, mturk_results$Answer.surveycode)
@@ -58,7 +60,7 @@ for (p in 1:length(data_1)) {
   # Trim the map and add the participant ID back in.
   data_2 = data_1[p][[1]]$trials %>%
     as.data.frame() %>%
-    mutate(map=gsub("_no-grid.png", "", map), unique_id=data_0$UniqueId[p],
+    mutate(map=gsub(".png", "", map), unique_id=data_0$UniqueId[p],
            wrong_attempts=data_1[p][[1]]$catch_trials$wrong_attempts)
 
   # Stack the trial information for the current participant.
@@ -77,9 +79,6 @@ data_3 = read_csv(file.path(pilot_path, "data.csv"))
 
 # Select and normalize the goal judgments.
 data_4 = data_3 %>%
-  filter(wrong_attempts < 2) %>%
-  # filter(!(unique_id %in% c("3bcOC7j", "moLWXPA", "PoNIgep", "qfVE6hb", "yYCyou3"))) %>%
-  filter(!(unique_id %in% c("3bcOC7j", "moLWXPA", "OEdznH0", "PoNIgep", "qfVE6hb", "S9Y8JeP", "VHNf4qQ", "yYCyou3"))) %>%
   select(unique_id, map, A, B, C) %>%
   gather(goal, human, A, B, C) %>%
   left_join(do(., summarize(group_by(., unique_id, map),
@@ -178,9 +177,6 @@ plot_1
 ```{r, fig.align="center"}
 # Select and normalize the entrance judgments.
 data_6 = data_3 %>%
-  filter(wrong_attempts < 2) %>%
-  # filter(!(unique_id %in% c("3bcOC7j", "moLWXPA", "PoNIgep", "qfVE6hb", "yYCyou3"))) %>%
-  filter(!(unique_id %in% c("3bcOC7j", "moLWXPA", "OEdznH0", "PoNIgep", "qfVE6hb", "S9Y8JeP", "yYCyou3"))) %>%
   filter(!grepl("ND", map)) %>%
   select(unique_id, map, `1`, `2`, `3`) %>%
   gather(entrance, human, `1`, `2`, `3`) %>%
@@ -267,7 +263,7 @@ plot_2 = data_7 %>%
 plot_2
 ```
 
-The Pearson correlation is `r cor(data_7$z_model, data_7$mean_z_human, method="pearson")`. If we split up the data by trial, we get:
+The Pearson correlation is `r cor(data_7$model, data_7$mean_human, method="pearson")`. If we split up the data by trial, we get:
 
 ```{r, fig.align="center"}
 # Plot entrance inferences by trial.
@@ -313,6 +309,39 @@ plot_4 = data_8 %>%
 plot_4
 ```
 
+The Pearson correlation is `r cor(data_8$model, data_8$mean_human, method="pearson")`.
+
+<!-- Print model comparisons by trial: -->
+<!--
+```{r, eval=FALSE}
+plot_set = list()
+for (m in unique(arrange(data_8, map)$map)) {
+  plot_5 = data_8 %>%
+    filter(map==m) %>%
+    gather(source, value, mean_human, model) %>%
+    ggplot(aes(x=inference, y=value, group=source, color=source)) +
+    geom_point() + 
+    geom_line() +
+    geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.2) +
+    facet_wrap(~factor(type,
+                       levels=c("entrance", "goal"), 
+                       labels=c("Entrance", "Goal")), 
+               scale="free_x") +
+    xlab("Feature") +
+    ylab("Inference") +
+    scale_color_discrete(name="Source",
+                         limits=c("mean_human", "model"),
+                         labels=c("Human", "Model")) +
+    theme_classic() +
+    theme(legend.title=element_text(hjust=0.5))
+  # plot_set = list(plot_set, plot_5)
+}
+```
+
+<img src="`r file.path(getwd(), "stimuli/experiment_1/DX_DX_0.png")`" style="height:auto;width=50px;"/>
+
+<img src="`r file.path(getwd(), "stimuli/experiment_1/DX_NX_0.png")`" style="height:auto;width=50px;"/>
+-->
 
 ```{r, eval=FALSE, include=FALSE}
 data_4 %>% 
@@ -342,31 +371,4 @@ data_3 %>%
   # cor()
   # 
   # corrplot()
-```
-
-Start putting stimuli here with:
-1. Model predictions
-2. Participant judgments
-
-![Caption](../../stimuli/experiment_1/DX_DX_0.png)
-
-```{r}
-data_8 %>%
-  filter(map=="DX_DX_0") %>%
-  gather(source, value, mean_human, model) %>%
-  ggplot(aes(x=inference, y=value, group=source, color=source)) +
-  geom_point() + 
-  geom_line() +
-  geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.2) +
-  facet_wrap(~factor(type,
-                     levels=c("entrance", "goal"), 
-                     labels=c("Entrance", "Goal")), 
-             scale="free_x") +
-  xlab("Feature") +
-  ylab("Inference") +
-  scale_color_discrete(name="Source",
-                       limits=c("mean_human", "model"),
-                       labels=c("Human", "Model")) +
-  theme_classic() +
-  theme(legend.title=element_text(hjust=0.5))
 ```
