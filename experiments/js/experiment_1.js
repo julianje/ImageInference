@@ -136,25 +136,25 @@ function make_slides(f) {
     $(".slider_row").remove();
 
     $(".prompt").html("Consider the following new room and person.");
-    $(".stimulus").html("<div style=\"display:inline-block;margin-right:50px;vertical-align:top;\">" +
-                        // "<img style=\"height:250px;width:auto;border:1px solid black;\" " +
-                        "<img style=\"height:250px;width:auto;\" " +
-                        "src=\"../stimuli/experiment_1/" + exp.trials[j] + "\"></img>" +
-                        "</div>" +
-                        "<div align=\"center\" style=\"display:inline-block;\">" +
-                        "<p style=\"font-size:16px;font-weight:bold;\">Which corner is farthest from Door 1<br>" +
-                        "(there may be more than one)?</p>" +
-                        "<label>" +
-                        "<input type=\"radio\" name=\"objective\" value=\"A\"/ style=\"margin: 0 5px 0 0;\">" +
-                        "<img src=\"../stimuli/experiment_1/A.png\" alt=\"\" style=\"width:35px;height:auto;\">" +
-                        "</label>" +
-                        "<label><input type=\"radio\" name=\"objective\" value=\"B\"/>" +
-                        "<img src=\"../stimuli/experiment_1/B.png\" alt=\"\" style=\"width:35px;height:auto;\">" +
-                        "</label>" +
-                        "<label><input type=\"radio\" name=\"objective\" value=\"C\"/>" + 
-                        "<img src=\"../stimuli/experiment_1/C.png\" alt=\"\" style=\"width:35px;height:auto;\">" +
-                        "</label>" +
-                        "</div>");
+    $(".stimulus").html(
+      "<div style=\"display:inline-block;margin-right:50px;vertical-align:top;\">" +
+      "<img style=\"height:250px;width:auto;\" " +
+      "src=\"../stimuli/experiment_1/" + exp.trials[j] + "\"></img>" +
+      "</div>" +
+      "<div align=\"center\" style=\"display:inline-block;\">" +
+      "<p style=\"font-size:16px;font-weight:bold;\">Which corner is farthest from Door 1<br>" +
+      "(there may be more than one)?</p>" +
+      "<label>" +
+      "<input type=\"radio\" name=\"objective\" value=\"A\"/ style=\"margin: 0 5px 0 0;\">" +
+      "<img src=\"../stimuli/experiment_1/A.png\" alt=\"\" style=\"width:35px;height:auto;\">" +
+      "</label>" +
+      "<label><input type=\"radio\" name=\"objective\" value=\"B\"/>" +
+      "<img src=\"../stimuli/experiment_1/B.png\" alt=\"\" style=\"width:35px;height:auto;\">" +
+      "</label>" +
+      "<label><input type=\"radio\" name=\"objective\" value=\"C\"/>" + 
+      "<img src=\"../stimuli/experiment_1/C.png\" alt=\"\" style=\"width:35px;height:auto;\">" +
+      "</label>" +
+      "</div>");
 
     exp.questions = ["Which door did they come from?",
                      "Which corner is the person going for?"];
@@ -355,7 +355,7 @@ function init() {
       $('.slide').empty();
       repeatWorker = true;
       alert("You have already completed the maximum number of HITs allowed by this requester. Please click " + 
-            "'Return HIT' to avoid any impact on your approval rating.");
+        "'Return HIT' to avoid any impact on your approval rating.");
     }
   })();
 

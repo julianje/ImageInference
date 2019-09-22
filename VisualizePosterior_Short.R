@@ -49,7 +49,7 @@ States <- posterior %>%
   rownames_to_column("Id") %>% gather(Step,State,Obs0:(ncol(posterior)+1)) %>%
   separate(Step,into=c("Discard","Time"),sep=3) %>%
   dplyr::select(-Discard) %>%
-  mutate(Time=as.numeric(Time)) %>%
+  mutate(State=as.numeric(State), Time=as.numeric(Time)) %>%
   arrange(Id,Time) %>%
   mutate(y=ceiling(State/MapWidth),
          x=State%%MapWidth+1) %>% mutate(Id=as.numeric(Id))

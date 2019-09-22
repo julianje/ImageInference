@@ -13,7 +13,7 @@ GoalPredictions <- data.frame(Files = list.files("data/model/predictions/Manhatt
   mutate(States=str_detect(Files,"Goal")) %>% tbl_df %>% filter(States)
 
 goalposterior <- do.call(bind_rows,lapply(GoalPredictions$Files,function(x){
-  mutate(read_csv(paste("data/model/predictions/Manhattan/pilot_4/",x,sep=""),
+  mutate(read_csv(paste("data/model/predictions/Manhattan/",x,sep=""),
                   col_types=cols()),Trial=gsub("_Goal_Posterior.csv","",x))})) %>%
   mutate(GoalLetter=factor(Goal))
 

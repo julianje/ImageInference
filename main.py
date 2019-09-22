@@ -40,17 +40,17 @@ path = "data/model/predictions/" + ("" if diagonal == False else "diagonal/")
 #Observation = [4,7]
 
 # Uncomment these lines if running on the cluster or as batch.
-TrialName = sys.argv[1]
-World = sys.argv[1]
-Doors = [[int(num) for num in pair.split(" ")] for pair in sys.argv[2].split("-")]
-Observation = [int(num) for num in sys.argv[3].split(" ")]
-plt.switch_backend('agg')
+# TrialName = sys.argv[1]
+# World = sys.argv[1]
+# Doors = [[int(num) for num in pair.split(" ")] for pair in sys.argv[2].split("-")]
+# Observation = [int(num) for num in sys.argv[3].split(" ")]
+# plt.switch_backend('agg')
 
 # Uncomment these lines if running locally.
-# TrialName = "PX_PX_0"
-# World = "PX_PX_0"
-# Doors = [[17, 6], [34, 33], [105, 116]]
-# Observation = [4, 4]
+TrialName = "PX_PX_0"
+World = "PX_PX_0"
+Doors = [[17, 6], [34, 33], [105, 116]]
+Observation = [4, 4]
 
 print(TrialName)
 
