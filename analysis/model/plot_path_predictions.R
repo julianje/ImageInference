@@ -3,18 +3,18 @@ library(gganimate)
 library(RColorBrewer)
 
 # Set working directory.
-directory <- "~/Documents/Projects/Models/ImageInference/ImageInference/"
-#directory <- "D:/Research/ImageInference/"
+# directory <- "~/Documents/Projects/Models/ImageInference/ImageInference/"
+directory <- "D:/Research/ImageInference/"
 setwd(directory)
 
 # Source the file with all of the map data.
-source("maps/map_specifications.R")
+source("stimuli/experiment_1/map_specifications.R")
 
 # Only plot trajectories with probability higher than the threshold.
-threshold <- 0.0025
+threshold <- 0.005
 
 # Read in the full set of state inferences.
-StatePredictions <- data.frame(Files=list.files("data/model/predictions/")) %>%
+StatePredictions <- data.frame(Files=list.files("data/model/predictions/Manhattan")) %>%
   mutate(States=str_detect(Files, "States_Posterior")) %>% 
   tbl_df %>% 
   filter(States)
@@ -22,7 +22,7 @@ StatePredictions <- data.frame(Files=list.files("data/model/predictions/")) %>%
 fullposterior <- do.call(bind_rows, 
                          lapply(StatePredictions$Files, 
                                 function(x) {
-                                  mutate(read_csv(paste("data/model/predictions/", x, sep=""),
+                                  mutate(read_csv(paste("data/model/predictions/Manhattan/", x, sep=""),
                                                   col_types=cols()), 
                                          Trial=x)
                                 }))
@@ -55,6 +55,10 @@ PlotPath <- function(m) {
   myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
   sc <- scale_colour_gradientn(colours=myPalette(100), limits=c(0,15))
   
+  crumbs = data.frame(x=scene_x,
+                      y=scene_y,
+                      filename="stimuli/experiment_1/crumbs.png")
+  
   # Color path based on time.
   plot = States %>% 
     filter(Probability>=threshold) %>% 
@@ -76,7 +80,8 @@ PlotPath <- function(m) {
           axis.ticks.y=element_blank())+
     sc +
     coord_fixed() +
-    geom_point(aes(x=scene_x, y=scene_y), size=6, pch=19, colour="#000000") + 
+    # geom_point(aes(x=scene_x, y=scene_y), size=6, pch=19, colour="#000000") +
+    geom_image(data=crumbs, aes(x=scene_x, y=scene_y, image=filename), size=0.1) +
     geom_point(data=data.frame(xv=c(2.5, 2.5, 9.5, 9.5), 
                                yv=c(2.5, 9.5, 2.5, 9.5)), 
                aes(xv, yv), 
