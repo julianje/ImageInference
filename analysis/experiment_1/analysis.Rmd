@@ -68,7 +68,7 @@ for (p in 1:length(data_1)) {
 }
 
 # Write the preprocessed data.
-write_csv(data_3, file.path(pilot_path, "data.csv"))
+# write_csv(data_3, file.path(pilot_path, "data.csv"))
 ```
 
 ## Goal Predictions
