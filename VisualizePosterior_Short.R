@@ -11,10 +11,10 @@ library(tidyverse)
 
 # Load everything ------------------------------------------
 Threshhold <- 0.001 #Only plot trajectories with probability higher than this:
-TrialName = "PX_PX_0"
+TrialName = "NX_NX_0"
 
 # directory = "~/Documents/Projects/Models/ImageInference/ImageInference/ModelPredictions/"
-directory = "D:/Research/ImageInference/data/model/predictions/"
+directory = "D:/Research/ImageInference/data/model/predictions/Manhattan/"
 setwd(directory)
 
 statesfile = paste(directory,TrialName,"_States_Posterior.csv",sep="")

@@ -1,6 +1,7 @@
 library(tidyverse)
 library(gganimate)
 library(RColorBrewer)
+library(ggimage)
 
 # Set working directory.
 # directory <- "~/Documents/Projects/Models/ImageInference/ImageInference/"
@@ -11,7 +12,7 @@ setwd(directory)
 source("stimuli/experiment_1/map_specifications.R")
 
 # Only plot trajectories with probability higher than the threshold.
-threshold <- 0.005
+threshold <- 0.001
 
 # Read in the full set of state inferences.
 StatePredictions <- data.frame(Files=list.files("data/model/predictions/Manhattan")) %>%
@@ -61,7 +62,7 @@ PlotPath <- function(m) {
   
   # Color path based on time.
   plot = States %>% 
-    filter(Probability>=threshold) %>% 
+    filter(Probability>=threshold) %>%
     arrange(Probability, Time) %>%
     ggplot() +
     geom_path(aes(x=x, y=y, group=Id, color=Time, alpha=Probability+0.75),

@@ -47,10 +47,10 @@ path = "data/model/predictions/" + ("" if diagonal == False else "diagonal/")
 # plt.switch_backend('agg')
 
 # Uncomment these lines if running locally.
-TrialName = "PX_PX_0"
-World = "PX_PX_0"
-Doors = [[17, 6], [34, 33], [105, 116]]
-Observation = [4, 4]
+TrialName = "PX_NX_0"
+World = "PX_NX_0"
+Doors = [[64, 65], [106, 117], [67, 66]]
+Observation = [4, 7]
 
 print(TrialName)
 
