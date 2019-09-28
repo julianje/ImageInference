@@ -15,8 +15,13 @@ P(actions | scene) = sum(P(actions, rewards | scene)) = sum(P(actions | rewards,
 # TODO
 
 - [ ] Generate diagonal predictions
-- [ ] Design experiment_2
-- [ ] Compute correlation between number of sampled paths required to achieve minimal model error and the error between participant data and model predictions
-	- Make a histogram of samples/paths with positive probability (a bunch of paths with even prob. means more participant uncertainty)
+- [ ] Update generative model for experiment_2
 - [ ] Fix/document correct answers in `experiment_1_utils.js`
 - [ ] Fix `end.php`
+- [ ] Pilot experiment_2
+- [ ] Analyze experiment_2 results
+- [ ] Pilot experiment_3
+- [ ] Analyze experiment_3 results
+- [ ] Compute correlation between number of sampled paths required to achieve minimal model error and the error between participant data and model predictions
+	- Make a histogram of samples/paths with positive probability (a bunch of paths with even prob. means more participant uncertainty)
+- [ ] Clean up OSF repository
