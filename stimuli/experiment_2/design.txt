@@ -1,9 +1,0 @@
-# Stimuli
-
-- Definitely 1: Standard, Standard, 2 Doors
-- Probably 1: Standard, Walls, 2 Doors
-- Unknown: Standard, Walls, 2 Doors
-- Probably 2: Standard, Walls, 2 Doors
-- Definitely 2: Standard, Standard, 2 Doors
-
-We need three examples per variation.

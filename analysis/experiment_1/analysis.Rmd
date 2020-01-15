@@ -311,37 +311,60 @@ plot_4
 
 The Pearson correlation is `r cor(data_8$model, data_8$mean_human, method="pearson")`.
 
-<!-- Print model comparisons by trial: -->
-<!--
-```{r, eval=FALSE}
-plot_set = list()
-for (m in unique(arrange(data_8, map)$map)) {
-  plot_5 = data_8 %>%
-    filter(map==m) %>%
-    gather(source, value, mean_human, model) %>%
-    ggplot(aes(x=inference, y=value, group=source, color=source)) +
-    geom_point() + 
-    geom_line() +
-    geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.2) +
-    facet_wrap(~factor(type,
-                       levels=c("entrance", "goal"), 
-                       labels=c("Entrance", "Goal")), 
-               scale="free_x") +
-    xlab("Feature") +
-    ylab("Inference") +
-    scale_color_discrete(name="Source",
-                         limits=c("mean_human", "model"),
-                         labels=c("Human", "Model")) +
-    theme_classic() +
-    theme(legend.title=element_text(hjust=0.5))
-  # plot_set = list(plot_set, plot_5)
-}
+Now let's see if we can predict the model error based on how many doors there are in the task. We'll first start with goal inferences.
+
+```{r}
+plot_5 = data_5 %>%
+  mutate(num_doors=ifelse(grepl("ND", substr(map, 1, 2)), 1,
+                          ifelse(grepl("DX|NX", substr(map, 1, 2)), 2, 3))) %>%
+  ggplot(aes(x=model, y=mean_human, label=map)) +
+  # geom_point(aes(color=substr(map, 0, 2))) +
+  geom_point(aes(color=factor(num_doors))) +
+  # geom_text(vjust=-1.0) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  scale_color_discrete(name="Goal") + 
+  theme_classic() +
+  theme(plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5)) +
+  labs(color="Doors")
+plot_5
 ```
 
-<img src="`r file.path(getwd(), "stimuli/experiment_1/DX_DX_0.png")`" style="height:auto;width=50px;"/>
+There doesn't seem to be anything here, so let's try running a linear regression. 
 
-<img src="`r file.path(getwd(), "stimuli/experiment_1/DX_NX_0.png")`" style="height:auto;width=50px;"/>
--->
+```{r}
+temp_2 = data_4 %>%
+  left_join(model_1) %>%
+  mutate(model_error=human-model) %>%
+  mutate(num_doors=ifelse(grepl("ND", substr(map, 1, 2)), 1,
+                          ifelse(grepl("DX|NX", substr(map, 1, 2)), 2, 3)))
+m_0 = lm(formula=model_error~num_doors, data=temp_2)
+summary(m_0)
+```
+
+We can do the same thing for entrance inferences.
+
+```{r}
+plot_6 = data_7 %>%
+  mutate(num_doors=ifelse(grepl("ND", substr(map, 1, 2)), 1,
+                          ifelse(grepl("DX|NX", substr(map, 1, 2)), 2, 3))) %>%
+  ggplot(aes(x=model, y=mean_human, label=map)) +
+  # geom_point(aes(color=substr(map, 0, 2))) +
+  geom_point(aes(color=factor(num_doors))) +
+  # geom_text(vjust=-1.0) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  scale_color_discrete(name="Entrance") +
+  theme_classic() + 
+  theme(plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_6
+```
 
 ```{r, eval=FALSE, include=FALSE}
 data_4 %>% 

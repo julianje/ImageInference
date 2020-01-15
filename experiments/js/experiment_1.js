@@ -171,7 +171,7 @@ function make_slides(f) {
         "<td></td>" +
         "<td style=\"text-align:left;\">definitely not</td>" +
         "<td style=\"text-align:right;\">definitely</td>" +
-        "<td width=\"100px\"></td>": "<td></td>") +
+        "<td width=\"100px\"></td>" : "<td></td>") +
       "<td style=\"text-align:left;\">definitely not</td>" +
       "<td style=\"text-align:right;\">definitely</td>" +
       "</tr>" +
@@ -231,24 +231,24 @@ function make_slides(f) {
       "<div id=\"goal_2\" class=\"slider\">-------[ ]--------</div>" + 
       "</td>" +
       "</tr>");
-      utils.match_row_height("#multi_slider_table_" + j, ".slider_target");
-      utils.make_slider("#door_0", make_slider_callback(0));
-      utils.make_slider("#goal_0", make_slider_callback(1));
-      utils.make_slider("#door_1", make_slider_callback(2));
-      utils.make_slider("#goal_1", make_slider_callback(3));
-      utils.make_slider("#door_2", make_slider_callback(4));
-      utils.make_slider("#goal_2", make_slider_callback(5));
+    utils.match_row_height("#multi_slider_table_" + j, ".slider_target");
+    utils.make_slider("#door_0", make_slider_callback(0));
+    utils.make_slider("#goal_0", make_slider_callback(1));
+    utils.make_slider("#door_1", make_slider_callback(2));
+    utils.make_slider("#goal_1", make_slider_callback(3));
+    utils.make_slider("#door_2", make_slider_callback(4));
+    utils.make_slider("#goal_2", make_slider_callback(5));
 
-      exp.sliderPost = [];
-      if (exp.num_doors[j] == 1) {
-        exp.sliderPost[0] = -1;
-        exp.sliderPost[2] = -1;
-        exp.sliderPost[4] = -1;
-      }
-      else if (exp.num_doors[j] == 2) {
-        exp.sliderPost[4] = -1;
-      }
+    exp.sliderPost = [];
+    if (exp.num_doors[j] == 1) {
+      exp.sliderPost[0] = -1;
+      exp.sliderPost[2] = -1;
+      exp.sliderPost[4] = -1;
     }
+    else if (exp.num_doors[j] == 2) {
+      exp.sliderPost[4] = -1;
+    }
+  }
 
   // Run when the "Continue" button is hit on a slide.
   function button() {

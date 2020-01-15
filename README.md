@@ -12,10 +12,15 @@ P(actions | scene) = sum(P(actions, rewards | scene)) = sum(P(actions | rewards,
 - Agent is always in pursuit of one object
 - Agent leaves the room in the same door they come in
 
+# Directory 
+
+- `experiment_1`: joint inference of entrance and goal
+- `experiment_2`: path reconstruction
+- `experiment_3`: inferring number of agents in a room
+
 # TODO
 
 - [ ] Generate diagonal predictions
-- [ ] Update generative model for experiment_2
 - [ ] Fix/document correct answers in `experiment_1_utils.js`
 - [ ] Fix `end.php`
 - [ ] Pilot experiment_2
