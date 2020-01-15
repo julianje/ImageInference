@@ -1,4 +1,6 @@
 from Bishop import *
+from RandomPlanner import RandomPlanner
+
 import itertools as it
 import csv
 import matplotlib.pyplot as plt
@@ -17,14 +19,15 @@ def SceneLikelihood(Observer, Scene, rollouts=10000, verbose=True, Stage="Enteri
 		SceneMatches = [Scene in x[len(x)/2:len(x)] for x in Simulations.States]
 	if Stage=="Either":
 		SceneMatches = [Scene in x for x in Simulations.States]
-	return([O.Plr.Agent.rewards,O.Plr.GetPlanDistribution(),sum(SceneMatches)*1.0/rollouts,SceneMatches,Simulations])
+	return([Observer.Plr.Agent.rewards, Observer.Plr.GetPlanDistribution(), sum(SceneMatches)*1.0/rollouts, 
+		SceneMatches, Simulations])
 
 ##############
 # Parameters #
 ##############
 # Inference parameters
 verbose = False
-Stage="Entering"
+Stage = "Entering"
 Samples = 1000
 rollouts = 1000
 diagonal = False
@@ -47,10 +50,16 @@ path = "data/model/predictions/" + ("" if diagonal == False else "diagonal/")
 # plt.switch_backend('agg')
 
 # Uncomment these lines if running locally.
-TrialName = "PX_NX_0"
-World = "PX_NX_0"
-Doors = [[64, 65], [106, 117], [67, 66]]
-Observation = [4, 7]
+# TrialName = "PX_NX_0"
+# World = "PX_NX_0"
+# Doors = [[64, 65], [106, 117], [67, 66]]
+# Observation = [4, 7]
+# TrialName = "DX_DX_0"
+# World = "DX_DX_0"
+TrialName = "D1_0"
+World = "D1_0"
+Doors = [[64, 65]]
+Observation = [[4, 5], [4, 7]]
 
 print(TrialName)
 
@@ -69,6 +78,8 @@ for i in range(Samples):
 	O.Plr.Agent.ResampleAgent()
 	# Run the planner manually since SceneLikelihood has planning turned off on SimulateAgents
 	O.Plr.Prepare(Validate=False) # Don't check for inconsistencies in model so that code runs faster
+	print(O.Plr.Simulate)
+	sys.exit()
 	Results[i] = SceneLikelihood(O, Scene, rollouts, verbose, Stage=Stage)
 	Entrance[i] = States[0]
 
@@ -80,26 +91,27 @@ RNormalizer = sum([Results[i][2] for i in range(len(Results))])
 # Normalize samples:
 for i in range(len(Results)):
 	Results[i][2] /= RNormalizer
+	# if RNormalizer != 0:
+	# 	Results[i][2] /= RNormalizer
 
 # Get Probability that agent pursues each goal:
 ##############################################
 GoalProbs= [sum([Results[sample][1][goal]*Results[sample][2] for sample in range(len(Results))]) for goal in range(len(O.Plr.Map.ObjectLocations))]
 GoalNames=O.Plr.Map.ObjectNames
 
-plt.figure(1)
-xvals = np.arange(len(GoalNames))
-plt.bar(xvals,GoalProbs,align='center',alpha=0.5)
-plt.xticks(xvals,GoalNames)
-plt.ylabel('Probability')
-axes = plt.gca()
-axes.set_ylim([0,1])
-plt.title(TrialName)
-plt.savefig(path+TrialName+".png")
-plt.close(1)
+# plt.figure(1)
+# xvals = np.arange(len(GoalNames))
+# plt.bar(xvals,GoalProbs,align='center',alpha=0.5)
+# plt.xticks(xvals,GoalNames)
+# plt.ylabel('Probability')
+# axes = plt.gca()
+# axes.set_ylim([0,1])
+# plt.title(TrialName)
+# plt.savefig(path+TrialName+".png")
+# plt.close(1)
 
 # Get Posterior over states and actions:
 ########################################
-
 # Put the samples in a dictionary
 ActionPosterior = {}
 StatePosterior = {}
@@ -124,6 +136,7 @@ for R in Results:
 					StatePosterior[tuple(states)] += R[2] # Likelihood of reward function * likelihood of action generating scene
 				else:
 					StatePosterior[tuple(states)] = R[2]
+
 # Remove dictionary ugliness and normalize
 ca = sum(ActionPosterior.values())
 InferredActions = [ActionPosterior.keys(),ActionPosterior.values()]

@@ -1,15 +1,18 @@
 #!/bin/bash
 
-if [ $1 = "true" ]
+TOGGLE=$1
+EXPERIMENT=$2
+
+if [ $TOGGLE = "true" ]
 then
-	for file in $(find ../stimuli/experiment_1 -maxdepth 1 -type f -name "*.ini")
+	for file in $(find ../stimuli/$EXPERIMENT -maxdepth 1 -type f -name "*.ini")
 	do
 		sed -i 's/SoftmaxAction\ =\ False/SoftmaxAction\ =\ True/' $file
 	done
-elif [ $1 = "false" ]
+elif [ $TOGGLE = "false" ]
 then
-	for file in $(find ../stimuli/experiment_1 -maxdepth 1 -type f -name "*.ini")
+	for file in $(find ../stimuli/$EXPERIMENT -maxdepth 1 -type f -name "*.ini")
 	do
-		sed -i 's/SoftmaxAction\ =\ False/SoftmaxAction\ =\ False/' $file
+		sed -i 's/SoftmaxAction\ =\ True/SoftmaxAction\ =\ False/' $file
 	done
 fi

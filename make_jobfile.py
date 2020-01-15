@@ -2,9 +2,9 @@ import subprocess
 import sys
 
 if __name__ == "__main__":
-	cluster = sys.argv[1]
+	num_crumbs = sys.argv[1]
 
-	maps = [
+	one_crumb_maps = [
 		{"map": "DX_DX_0", "doors": "16 5-56 55", "observation": "6 4"},
 		{"map": "DX_NX_0", "doors": "16 5-104 115", "observation": "5 4"},
 		{"map": "DX_PX_0", "doors": "15 4-86 87", "observation": "4 6"},
@@ -30,10 +30,29 @@ if __name__ == "__main__":
 		{"map": "UN_UN_0", "doors": "64 65-104 115", "observation": "5 5"}
 	]
 
-	for m in maps:
-		if cluster == "true":
+	two_crumb_maps = [
+		{"map": "D1_0", "doors": "64 65", "observation": "4 5-4 7"},
+		{"map": "D1_1", "doors": "17 6", "observation": "3 6-5 4"},
+		{"map": "D1_2", "doors": "56 55-64 65", "observation": "6 4-6 6"},
+		{"map": "P1_0", "doors": "64 65", "observation": "4 4-5 6"},
+		{"map": "P1_1", "doors": "64 65", "observation": "6 5-8 4"},
+		{"map": "P1_2", "doors": "78 77-106 117", "observation": "4 8-6 7"},
+		{"map": "UN_0", "doors": "104 115", "observation": "4 5-7 5"},
+		{"map": "UN_1", "doors": "64 65", "observation": "4 5-5 7"},
+		{"map": "UN_2", "doors": "53 54-103 114", "observation": "4 6-6 4"},
+		{"map": "P2_0", "doors": "86 87", "observation": "5 5-7 5"},
+		{"map": "P2_1", "doors": "106 117", "observation": "2 4-8 5"},
+		{"map": "P2_2", "doors": "64 65-104 115", "observation": "4 6-6 6"},
+		{"map": "D2_0", "doors": "64 65", "observation": "4 6-6 6"},
+		{"map": "D2_1", "doors": "64 65", "observation": "4 8-6 5"},
+		{"map": "D2_2", "doors": "16 5-56 55", "observation": "4 6-6 4"}
+	]
+
+	if num_crumbs == "1":
+		for m in one_crumb_maps:
 			print("python main.py %s '%s' '%s'" % (m["map"], m["doors"], m["observation"]))
-		elif cluster == "false":
-			subprocess.call('python main.py %s "%s" "%s"' % (m["map"], m["doors"], m["observation"]), shell=True)
-		else:
-			print("Please specify if this file is being run on the cluster (true/false).")
+	elif num_crumbs == "2":
+		for m in two_crumb_maps:
+			print("python main.py %s '%s' '%s'" % (m["map"], m["doors"], m["observation"]))
+	else:
+		sys.exit("Please enter a valid number of crumbs observed (1 or 2).")

@@ -1,0 +1,114 @@
+TrialName = "DX_DX_0"
+World = "DX_DX_0"
+Doors = [[16, 5], [56, 55]]
+Observation = [6, 4]
+
+TrialName = "DX_NX_0"
+World = "DX_NX_0"
+Doors = [[16, 5], [104, 115]]
+Observation = [5, 4]
+
+TrialName = "DX_PX_0"
+World = "DX_PX_0"
+Doors = [[15, 4], [86, 87]]
+Observation = [4, 6]
+
+TrialName = "DX_UN_0"
+World = "DX_UN_0"
+Doors = [[104, 115], [34, 33]]
+Observation = [5, 5]
+
+TrialName = "ND_DX_0"
+World = "ND_DX_0"
+Doors = [[64, 65]]
+Observation = [4, 4]
+
+TrialName = "ND_DX_1"
+World = "ND_DX_1"
+Doors = [[42, 43]]
+Observation = [2, 6]
+
+TrialName = "ND_NX_0"
+World = "ND_NX_0"
+Doors = [[64, 65]]
+Observation = [5, 4]
+
+TrialName = "ND_NX_1"
+World = "ND_NX_1"
+Doors = [[42, 43]]
+Observation = [3, 7]
+
+TrialName = "ND_PX_0"
+World = "ND_PX_0"
+Doors = [[42, 43]]
+Observation = [3, 5]
+
+TrialName = "ND_PX_1"
+World = "ND_PX_1"
+Doors = [[53, 54]]
+Observation = [2, 4]
+
+TrialName = "ND_UN_0"
+World = "ND_UN_0"
+Doors = [[86, 87]]
+Observation = [7, 6]
+
+TrialName = "NX_DX_0"
+World = "NX_DX_0"
+Doors = [[64, 65], [106, 117], [56, 55]]
+Observation = [6, 5]
+
+TrialName = "NX_NX_0"
+World = "NX_NX_0"
+Doors = [[14, 3], [53, 54], [105, 116]]
+Observation = [5, 5]
+
+TrialName = "NX_PX_0"
+World = "NX_PX_0"
+Doors = [[75, 76], [105, 116], [34, 33]]
+Observation = [5, 3]
+
+TrialName = "NX_UN_0"
+World = "NX_UN_0"
+Doors = [[64, 65], [106, 117], [56, 55]]
+Observation = [4, 7]
+
+TrialName = "PX_DX_0"
+World = "PX_DX_0"
+Doors = [[16, 5], [106, 117], [45, 44]]
+Observation = [6, 2]
+
+TrialName = "PX_NX_0"
+World = "PX_NX_0"
+Doors = [[64, 65], [106, 117], [67, 66]]
+Observation = [4, 7]
+
+TrialName = "PX_PX_0"
+World = "PX_PX_0"
+Doors = [[17, 6], [105, 116], [34, 33]]
+Observation = [4, 4]
+
+TrialName = "PX_UN_0"
+World = "PX_UN_0"
+Doors = [[53, 54], [97, 98], [56, 55]]
+Observation = [6, 7]
+
+TrialName = "UN_DX_0"
+World = "UN_DX_0"
+Doors = [[16, 5], [56, 55]]
+Observation = [6, 5]
+
+TrialName = "UN_NX_0"
+World = "UN_NX_0"
+Doors = [[18, 7], [78, 77]]
+Observation = [7, 7]
+
+TrialName = "UN_PX_0"
+World = "UN_PX_0"
+Doors = [[75, 76], [105, 116]]
+Observation = [5, 3]
+
+TrialName = "UN_UN_0"
+World = "UN_UN_0"
+Doors = [[64, 65], [104, 115]]
+Observation = [5, 5]

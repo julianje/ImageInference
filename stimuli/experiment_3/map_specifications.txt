@@ -1,0 +1,74 @@
+TrialName = "D1_0"
+World = "D1_0"
+Doors = [[64, 65]]
+Observation = [[4, 5], [4, 7]]
+
+TrialName = "D1_1"
+World = "D1_1"
+Doors = [[17, 6]]
+Observation = [[3, 6], [5, 4]]
+
+TrialName = "D1_2"
+World = "D1_2"
+Doors = [[56, 55], [64, 65]]
+Observation = [[6, 4], [6, 6]]
+
+TrialName = "P1_0"
+World = "P1_0"
+Doors = [[64, 65]]
+Observation = [[4, 4], [5, 6]]
+
+TrialName = "P1_1"
+World = "P1_1"
+Doors = [[64, 65]]
+Observation = [[6, 5], [8, 4]]
+
+TrialName = "P1_2"
+World = "P1_2"
+Doors = [[78, 77], [106, 117]]
+Observation = [[4, 8], [6, 7]]
+
+TrialName = "UN_0"
+World = "UN_0"
+Doors = [[104, 115]]
+Observation = [[4, 5], [7, 5]]
+
+TrialName = "UN_1"
+World = "UN_1"
+Doors = [[64, 65]]
+Observation = [[4, 5], [5, 7]]
+
+TrialName = "UN_2"
+World = "UN_2"
+Doors = [[53, 54], [103, 114]]
+Observation = [[4, 6], [6, 4]]
+
+TrialName = "P2_0"
+World = "P2_0"
+Doors = [[86, 87]]
+Observation = [[5, 5], [7, 5]]
+
+TrialName = "P2_1"
+World = "P2_1"
+Doors = [[106, 117]]
+Observation = [[2, 4], [8, 5]]
+
+TrialName = "P2_2"
+World = "P2_2"
+Doors = [[64, 65], [104, 115]]
+Observation = [[4, 6], [6, 6]]
+
+TrialName = "D2_0"
+World = "D2_0"
+Doors = [[64, 65]]
+Observation = [[4, 6], [6, 6]]
+
+TrialName = "D2_1"
+World = "D2_1"
+Doors = [[64, 65]]
+Observation = [[4, 8], [6, 5]]
+
+TrialName = "D2_2"
+World = "D2_2"
+Doors = [[16, 5], [56 55]]
+Observation = [[4, 6], [6, 4]]
