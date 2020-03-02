@@ -363,15 +363,12 @@ function init() {
   trials = trials();
   exp.trials = _.pluck(trials, "name");
   exp.furthest_corner = _.pluck(trials, "furthest_corner");
+  exp.num_doors = _.pluck(trials, "num_doors");
   exp.num_trials = exp.trials.length;
   $(".num_trials").html(exp.num_trials);
-  exp.num_doors = _.pluck(trials, "num_doors");
-  exp.character = get_characters(characters);
-  $(".character").html(exp.character);
   exp.data_trials = [];
   exp.catch_trials = [];
   
-
   // Get user system specs.
   exp.system = {
     Browser: BrowserDetect.browser,

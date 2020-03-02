@@ -1,5 +1,5 @@
 from Bishop import *
-from RandomPlanner import RandomPlanner
+from RandomPlanner import Planner
 
 import itertools as it
 import csv
@@ -33,7 +33,7 @@ rollouts = 1000
 diagonal = False
 # path = "data/model/predictions/" + ("Manhattan_new/" if diagonal == False else "diagonal/")
 path = "data/model/predictions/" + ("" if diagonal == False else "diagonal/")
-
+sys.exit()
 # Trial parameters
 #TrialName = "Trial C"
 #World = "RoomA"
@@ -54,12 +54,10 @@ path = "data/model/predictions/" + ("" if diagonal == False else "diagonal/")
 # World = "PX_NX_0"
 # Doors = [[64, 65], [106, 117], [67, 66]]
 # Observation = [4, 7]
-# TrialName = "DX_DX_0"
-# World = "DX_DX_0"
-TrialName = "D1_0"
-World = "D1_0"
-Doors = [[64, 65]]
-Observation = [[4, 5], [4, 7]]
+TrialName = "DX_DX_0"
+World = "DX_DX_0"
+Doors = [[16, 5], [56, 55]]
+Observation = [6, 4]
 
 print(TrialName)
 

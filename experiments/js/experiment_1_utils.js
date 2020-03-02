@@ -45,10 +45,3 @@ function embed_slides(num_trials) {
     $(".trial_slides").html(slides);
   }
 }
-
-// Sample unique names for the enforcer and the agent.
-function get_characters(characters) {
-    var shuffled_characters = _.shuffle(characters);
-
-    return shuffled_characters[0].name;
-}

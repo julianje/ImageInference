@@ -1,6 +1,6 @@
 library(tidyverse)
 # library(gganimate)
-# library(RColorBrewer)
+library(RColorBrewer)
 # library(png)
 
 # library(grid)
@@ -11,7 +11,7 @@ library(tidyverse)
 
 # Load everything ------------------------------------------
 Threshhold <- 0.001 #Only plot trajectories with probability higher than this:
-TrialName = "NX_NX_0"
+TrialName = "DX_DX_0"
 
 # directory = "~/Documents/Projects/Models/ImageInference/ImageInference/ModelPredictions/"
 directory = "D:/Research/ImageInference/data/model/predictions/Manhattan/"
@@ -28,17 +28,17 @@ time <- read_csv(timefile, col_types = cols())
 mapheight = posterior$MapHeight[1]
 mapwidth = posterior$MapWidth[1]
 
-# # Visualize goal inference -------------------------------
-# goals %>% ggplot(aes(Goal,Probability))+geom_bar(stat="identity")+
-#   theme_classic()+scale_y_continuous(limits=c(0,1.01))+
-#   theme(aspect.ratio=1)+ggtitle(TrialName)
-# 
-# # Visualize time -----------------------------------
-# time %>% group_by(Time) %>% summarise(Probability=sum(Probability)) %>%
-#   ggplot(aes(Time,Probability))+geom_bar(stat="identity")+
-#   theme_classic()+scale_y_continuous(limits=c(0,1.01),breaks=c(0,0.5,1))+
-#   scale_x_continuous(limits=c(0,100))+
-#   theme(aspect.ratio=1)+ggtitle(paste("Time estimate: ",TrialName,sep=""))
+# Visualize goal inference -------------------------------
+goals %>% ggplot(aes(Goal,Probability))+geom_bar(stat="identity")+
+  theme_classic()+scale_y_continuous(limits=c(0,1.01))+
+  theme(aspect.ratio=1)+ggtitle(TrialName)
+
+# Visualize time -----------------------------------
+time %>% group_by(Time) %>% summarise(Probability=sum(Probability)) %>%
+  ggplot(aes(Time,Probability))+geom_bar(stat="identity")+
+  theme_classic()+scale_y_continuous(limits=c(0,1.01),breaks=c(0,0.5,1))+
+  scale_x_continuous(limits=c(0,100))+
+  theme(aspect.ratio=1)+ggtitle(paste("Time estimate: ",TrialName,sep=""))
 
 # Visualize inferred path --------------------------------
 scene_x = posterior$Scene[1] %% mapwidth + 1
@@ -54,55 +54,55 @@ States <- posterior %>%
   mutate(y=ceiling(State/MapWidth),
          x=State%%MapWidth+1) %>% mutate(Id=as.numeric(Id))
 
-# myPalette <- colorRampPalette(rev(brewer.pal(11,"Spectral")))
-# sc <- scale_colour_gradientn(colours = myPalette(100), limits=c(0,15))
-# 
-# # color path based on time:
-# States %>% filter(Probability>=Threshhold) %>% arrange(Probability,Time) %>%
-#   ggplot()+
-#   geom_path(aes(x=x,y=y,group=Id,color=Time,alpha=Probability+0.75),
-#             position=position_jitter(height=0.25,width=0.25))+
-#   geom_point(aes(x=x,y=y,color=Time,alpha=Probability+0.75))+
-#   scale_x_continuous("",limits=c(0,mapwidth+1))+
-#   scale_y_reverse("",limits=c(mapheight+1,1))+
-#   theme_void()+theme(legend.title=element_blank(),
-#                         legend.position = "none",
-#                         axis.title.x=element_blank(),
-#                         axis.text.x=element_blank(),
-#                         axis.ticks.x=element_blank(),
-#                         axis.title.y=element_blank(),
-#                         axis.text.y=element_blank(),
-#                         axis.ticks.y=element_blank())+sc+coord_fixed()+
-#   geom_point(aes(x=scene_x,y=scene_y),size = 6, pch = 19,colour="#000000")+
-#   geom_point(data=data.frame(xv=c(2.5,2.5,9.5,9.5),yv=c(2.5,9.5,2.5,9.5)),aes(xv,yv),size=0.1)+
-#   geom_rect(data=data.frame(x1=c(2.5,2.5,8.5),x2=c(3.5,3.5,9.5),y1=c(2.5,8.5,2.5),y2=c(3.5,9.5,3.5),id=c("a","b","c")),
-#             aes(xmin=x1,xmax=x2,ymin=y1,ymax=y2,fill=id),alpha=1)+
-#   scale_fill_manual(values=c("#FF8F66","#8293FF","#7AB532"))+
-#   annotation_custom(g, xmin=2.5, xmax=9.5, ymin=-Inf, ymax=0.5)
-#   #annotation_raster(mypng, ymin = 2.5,ymax= 9.5,xmin = 2.5,xmax = 9.5) 
-# 
-# # color path based on probability
-# scb <- scale_colour_gradientn(colours = myPalette(100), limits=c(min(States$Probability),max(States$Probability)))
-# States %>% filter(Probability>=Threshhold) %>% arrange(Probability,Time) %>%
-#   ggplot()+
-#   geom_path(aes(x=x,y=y,group=Id,color=Probability,alpha=Probability+0.75),
-#             position=position_jitter(height=0.2,width=0.2))+
-#   geom_point(aes(x=x,y=y),colour="gray")+
-#   scale_x_continuous("",limits=c(0,mapwidth+1))+
-#   scale_y_reverse("",limits=c(mapheight+1,1))+
-#   theme_void()+theme(legend.title=element_blank(),
-#                      legend.position = "none",
-#                      axis.title.x=element_blank(),
-#                      axis.text.x=element_blank(),
-#                      axis.ticks.x=element_blank(),
-#                      axis.title.y=element_blank(),
-#                      axis.text.y=element_blank(),
-#                      axis.ticks.y=element_blank())+scb+coord_fixed()+
-#   geom_point(aes(x=scene_x,y=scene_y),size = 5, colour="#22231E")+
-#   geom_point(data=data.frame(xv=c(2.5,2.5,9.5,9.5),yv=c(2.5,9.5,2.5,9.5)),aes(xv,yv),size=0.1)+
-#   geom_rect(data=data.frame(x1=c(2.5,2.5,8.5),x2=c(3.5,3.5,9.5),y1=c(2.5,8.5,2.5),y2=c(3.5,9.5,3.5),id=c("a","b","c")),
-#             aes(xmin=x1,xmax=x2,ymin=y1,ymax=y2,fill=id),alpha=1)+
-#   scale_fill_manual(values=c("#FF8F66","#8293FF","#7AB532"))
+myPalette <- colorRampPalette(rev(brewer.pal(11,"Spectral")))
+sc <- scale_colour_gradientn(colours = myPalette(100), limits=c(0,15))
+
+# color path based on time:
+States %>% filter(Probability>=Threshhold) %>% arrange(Probability,Time) %>%
+  ggplot()+
+  geom_path(aes(x=x,y=y,group=Id,color=Time,alpha=Probability+0.75),
+            position=position_jitter(height=0.25,width=0.25))+
+  geom_point(aes(x=x,y=y,color=Time,alpha=Probability+0.75))+
+  scale_x_continuous("",limits=c(0,mapwidth+1))+
+  scale_y_reverse("",limits=c(mapheight+1,1))+
+  theme_void()+theme(legend.title=element_blank(),
+                        legend.position = "none",
+                        axis.title.x=element_blank(),
+                        axis.text.x=element_blank(),
+                        axis.ticks.x=element_blank(),
+                        axis.title.y=element_blank(),
+                        axis.text.y=element_blank(),
+                        axis.ticks.y=element_blank())+sc+coord_fixed()+
+  geom_point(aes(x=scene_x,y=scene_y),size = 6, pch = 19,colour="#000000")+
+  geom_point(data=data.frame(xv=c(2.5,2.5,9.5,9.5),yv=c(2.5,9.5,2.5,9.5)),aes(xv,yv),size=0.1)+
+  geom_rect(data=data.frame(x1=c(2.5,2.5,8.5),x2=c(3.5,3.5,9.5),y1=c(2.5,8.5,2.5),y2=c(3.5,9.5,3.5),id=c("a","b","c")),
+            aes(xmin=x1,xmax=x2,ymin=y1,ymax=y2,fill=id),alpha=1)+
+  scale_fill_manual(values=c("#FF8F66","#8293FF","#7AB532")) #+
+  #annotation_custom(g, xmin=2.5, xmax=9.5, ymin=-Inf, ymax=0.5)
+  #annotation_raster(mypng, ymin = 2.5,ymax= 9.5,xmin = 2.5,xmax = 9.5)
+
+# color path based on probability
+scb <- scale_colour_gradientn(colours = myPalette(100), limits=c(min(States$Probability),max(States$Probability)))
+States %>% filter(Probability>=Threshhold) %>% arrange(Probability,Time) %>%
+  ggplot()+
+  geom_path(aes(x=x,y=y,group=Id,color=Probability,alpha=Probability+0.75),
+            position=position_jitter(height=0.2,width=0.2))+
+  geom_point(aes(x=x,y=y),colour="gray")+
+  scale_x_continuous("",limits=c(0,mapwidth+1))+
+  scale_y_reverse("",limits=c(mapheight+1,1))+
+  theme_void()+theme(legend.title=element_blank(),
+                     legend.position = "none",
+                     axis.title.x=element_blank(),
+                     axis.text.x=element_blank(),
+                     axis.ticks.x=element_blank(),
+                     axis.title.y=element_blank(),
+                     axis.text.y=element_blank(),
+                     axis.ticks.y=element_blank())+scb+coord_fixed()+
+  geom_point(aes(x=scene_x,y=scene_y),size = 5, colour="#22231E")+
+  geom_point(data=data.frame(xv=c(2.5,2.5,9.5,9.5),yv=c(2.5,9.5,2.5,9.5)),aes(xv,yv),size=0.1)+
+  geom_rect(data=data.frame(x1=c(2.5,2.5,8.5),x2=c(3.5,3.5,9.5),y1=c(2.5,8.5,2.5),y2=c(3.5,9.5,3.5),id=c("a","b","c")),
+            aes(xmin=x1,xmax=x2,ymin=y1,ymax=y2,fill=id),alpha=1)+
+  scale_fill_manual(values=c("#FF8F66","#8293FF","#7AB532"))
 
 # Visualize starting pont -------------------------------
 Entrances <- States %>% filter(Time==0) %>% group_by(State) %>%

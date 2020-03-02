@@ -21,7 +21,7 @@ Observation = [[4, 4], [5, 6]]
 TrialName = "P1_1"
 World = "P1_1"
 Doors = [[64, 65]]
-Observation = [[6, 5], [8, 4]]
+Observation = [[6, 6], [8, 4]]
 
 TrialName = "P1_2"
 World = "P1_2"
@@ -71,4 +71,4 @@ Observation = [[4, 8], [6, 5]]
 TrialName = "D2_2"
 World = "D2_2"
 Doors = [[16, 5], [56 55]]
-Observation = [[4, 6], [6, 4]]
+Observation = [[4, 7], [7, 4]]

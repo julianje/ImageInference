@@ -52,6 +52,18 @@ PlotPath <- function(m) {
     mutate(y=ceiling(State/MapWidth),
            x=State%%MapWidth+1) %>% 
     mutate(Id=as.numeric(Id))
+    # filter(Time!=)
+  
+  # This bit of code is to only deal with the entering states.
+  temp_3 = tibble()
+  for (id in unique(States$Id)) {
+    temp_0 = States %>% 
+      filter(Id==id)
+    temp_1 = length(na.omit(temp_0$State)) / 2
+    temp_2 = temp_0 %>%
+      filter(Time<temp_1)
+    temp_3 = rbind(temp_3, temp_2)
+  }
   
   myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
   sc <- scale_colour_gradientn(colours=myPalette(100), limits=c(0,15))
@@ -61,7 +73,7 @@ PlotPath <- function(m) {
                       filename="stimuli/experiment_1/crumbs.png")
   
   # Color path based on time.
-  plot = States %>% 
+  plot = temp_3 %>% 
     filter(Probability>=threshold) %>%
     arrange(Probability, Time) %>%
     ggplot() +
@@ -82,19 +94,23 @@ PlotPath <- function(m) {
     sc +
     coord_fixed() +
     # geom_point(aes(x=scene_x, y=scene_y), size=6, pch=19, colour="#000000") +
-    geom_image(data=crumbs, aes(x=scene_x, y=scene_y, image=filename), size=0.1) +
-    geom_point(data=data.frame(xv=c(2.5, 2.5, 9.5, 9.5), 
-                               yv=c(2.5, 9.5, 2.5, 9.5)), 
-               aes(xv, yv), 
-               size=0.1) +
-    geom_rect(data=data.frame(x1=c(2.5, 8.5, 2.5), 
-                              x2=c(3.5, 9.5, 3.5),
-                              y1=c(2.5, 2.5, 8.5),
-                              y2=c(3.5, 3.5, 9.5),
-                              id=c("A", "B", "C")),
+    # geom_point(data=data.frame(xv=c(2.5, 2.5, 9.5, 9.5), 
+    #                            yv=c(2.5, 9.5, 2.5, 9.5)), 
+    #            aes(xv, yv), 
+    #            size=0.1) +
+    geom_rect(data=data.frame(x1=c(2.5, 8.5, 2.5, scene_x-0.5), 
+                              x2=c(3.5, 9.5, 3.5, scene_x+0.5),
+                              y1=c(2.5, 2.5, 8.5, scene_y-0.5),
+                              y2=c(3.5, 3.5, 9.5, scene_y+0.5),
+                              id=c("A", "B", "C", "crumbs")),
               aes(xmin=x1, xmax=x2, ymin=y1, ymax=y2, fill=id), 
-              alpha=1) +
-    scale_fill_manual(values=c("#FF8F66", "#8293FF", "#7AB532", "#767171"))
+              alpha=c(1, 1, 1, 0.75)) +
+    geom_text(data=data.frame(x=c(3, 9, 3),
+                              y=c(3, 3, 9),
+                              label=c("A", "B", "C")),
+              aes(x=x, y=y, label=label), color="black", fontface="bold", size=3) +
+    geom_image(data=crumbs, aes(x=scene_x, y=scene_y, image=filename), size=0.08) +
+    scale_fill_manual(values=c("#00AfEf", "#ED7D31", "#00B050", "#FFFFFF", "#767171")) 
   
   # Add the border to the map.
   for (segment in segments[m][[1]]) {

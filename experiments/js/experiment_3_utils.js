@@ -8,7 +8,7 @@ function trials() {
     {name: "P1_0.png", furthest_corner: ["A", "C"]}, 
     {name: "P1_1.png", furthest_corner: ["A", "B"]},
     {name: "P1_2.png", furthest_corner: ["A"]},
-    {name: "UN_0.png", furthest_corner: ["B"]},
+    {name: "UN_0.png", furthest_corner: ["A", "B"]},
     {name: "UN_1.png", furthest_corner: ["A", "B", "C"]},
     {name: "UN_2.png", furthest_corner: ["C"]},
     {name: "P2_0.png", furthest_corner: ["A"]},

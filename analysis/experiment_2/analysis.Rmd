@@ -1,0 +1,38 @@
+---
+  title: "Image Inference - Experiment 2"
+output:
+  html_document:
+  code_folding: hide
+df_print: paged
+pdf_document: default
+---
+  
+```{r setup, echo=FALSE}
+# Set the working directory.
+knitr::opts_knit$set(root.dir=normalizePath("../.."))
+
+# Turn off compile messages and warnings.
+knitr::opts_chunk$set(message=FALSE, warning=FALSE)
+```
+
+```{r echo=FALSE}
+# Import R libraries.
+library(tidyverse)
+
+# Set up which data is being analyzed.
+# data_path = "data/experiment_2/data_0"
+```
+
+# Pilot
+
+```{r, echo=FALSE}
+data_0 = read_csv("analysis/experiment_2/analysis.csv")
+
+# Compute the mean Bayes factor within participants.
+data_1 = data_0 %>%
+  group_by(participant) %>%
+  summarize(mean_bayes_factor=mean(bayes_factor))
+
+# Run a t-test with the null hypothesis that the true Bayes factor is 1.
+t.test(x=data_1$mean_bayes_factor, mu=1.0, alternative="greater")
+```

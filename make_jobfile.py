@@ -35,7 +35,7 @@ if __name__ == "__main__":
 		{"map": "D1_1", "doors": "17 6", "observation": "3 6-5 4"},
 		{"map": "D1_2", "doors": "56 55-64 65", "observation": "6 4-6 6"},
 		{"map": "P1_0", "doors": "64 65", "observation": "4 4-5 6"},
-		{"map": "P1_1", "doors": "64 65", "observation": "6 5-8 4"},
+		{"map": "P1_1", "doors": "64 65", "observation": "6 6-8 4"},
 		{"map": "P1_2", "doors": "78 77-106 117", "observation": "4 8-6 7"},
 		{"map": "UN_0", "doors": "104 115", "observation": "4 5-7 5"},
 		{"map": "UN_1", "doors": "64 65", "observation": "4 5-5 7"},
@@ -45,7 +45,7 @@ if __name__ == "__main__":
 		{"map": "P2_2", "doors": "64 65-104 115", "observation": "4 6-6 6"},
 		{"map": "D2_0", "doors": "64 65", "observation": "4 6-6 6"},
 		{"map": "D2_1", "doors": "64 65", "observation": "4 8-6 5"},
-		{"map": "D2_2", "doors": "16 5-56 55", "observation": "4 6-6 4"}
+		{"map": "D2_2", "doors": "16 5-56 55", "observation": "4 7-7 4"}
 	]
 
 	if num_crumbs == "1":
