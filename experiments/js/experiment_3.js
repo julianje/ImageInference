@@ -29,7 +29,7 @@ function make_slides(f) {
     start: function() {
       $(".catch_error").hide();
 
-      exp.question = ["How many corners are people walking to?",
+      exp.question = ["How many corners is each person walking to?",
                       "Do people always drop their cookie crumbs on their path to/from a corner?",
                       "Do people get to choose which door they enter through?",
                       "Do people leave the room out of the same door they entered or the door closest to them?",
@@ -142,8 +142,9 @@ function make_slides(f) {
       "src=\"../stimuli/experiment_3/" + exp.trials[j] + "\"></img>" +
       "</div>" +
       "<div align=\"center\" style=\"display:inline-block;\">" +
-      "<p style=\"font-size:16px;font-weight:bold;\">Which corner is farthest from Door 1<br>" +
-      "(there may be more than one)?</p>" +
+      "<p style=\"font-size:16px;font-weight:bold;\">Which corner is the farthest walk from Door 1?<br>" +
+      "If there is more than one correct answer, just<br>" +
+      "choose one of them.</p>" +
       "<label>" +
       "<input type=\"radio\" name=\"objective\" value=\"A\"/ style=\"margin: 0 5px 0 0;\">" +
       "<img src=\"../stimuli/experiment_3/A.png\" alt=\"\" style=\"width:35px;height:auto;\">" +
@@ -268,7 +269,7 @@ function make_slides(f) {
 function init() {
 
   // Set up the payment amount and Unique Turker.
-  exp.time = 15;
+  exp.time = 10;
   $(".time").html(exp.time);
   $(".payment").html("$" + (exp.time*6/60).toPrecision(3));
   repeatWorker = false;
@@ -288,12 +289,9 @@ function init() {
   exp.furthest_corner = _.pluck(trials, "furthest_corner");
   exp.num_trials = exp.trials.length;
   $(".num_trials").html(exp.num_trials);
-  exp.character = get_characters(characters);
-  $(".character").html(exp.character);
   exp.data_trials = [];
   exp.catch_trials = [];
   
-
   // Get user system specs.
   exp.system = {
     Browser: BrowserDetect.browser,

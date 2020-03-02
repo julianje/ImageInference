@@ -1,0 +1,235 @@
+---
+title: "Image Inference - Experiment 3"
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+  pdf_document: default
+---
+  
+```{r setup, echo=FALSE}
+# Set the working directory.
+knitr::opts_knit$set(root.dir=normalizePath("../.."))
+
+# Turn off compile messages and warnings.
+knitr::opts_chunk$set(message=FALSE, warning=FALSE)
+```
+
+```{r echo=FALSE}
+# Import R libraries.
+library(boot)
+library(corrplot)
+library(jsonlite)
+library(tidyverse)
+
+# Set up which data is being analyzed.
+data_path = "data/experiment_3/human/data_0"
+```
+
+# Pilot
+
+## Preprocessing
+
+```{r, echo=FALSE}
+# Read in the participant data (after manually removing errors).
+data_0 <- read_csv(file.path(data_path, "raw_data.csv"), quote="~")
+
+# Read in the MTurk results file.
+mturk_results = read_csv(file.path(data_path, "mturk_results.csv"), col_names=TRUE) %>%
+  mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode)))
+
+# Stop if there are duplicate database entries based on the MTurk results file.
+duplicates <- setdiff(data_0$UniqueId, mturk_results$Answer.surveycode)
+if (length(duplicates) != 0) { stop("There are duplicate entries.") }
+
+# Convert the JSON string into JSON.
+data_1 = lapply(data_0$Results, fromJSON)
+
+# Extract the trial information for each participant and stack them.
+data_3 = tibble()
+for (p in 1:length(data_1)) {
+  # Trim the map and add the participant ID back in.
+  data_2 = data_1[p][[1]]$trials %>%
+    as.data.frame() %>%
+    mutate(map=gsub(".png", "", map), unique_id=data_0$UniqueId[p],
+           wrong_attempts=data_1[p][[1]]$catch_trials$wrong_attempts)
+
+  # Stack the trial information for the current participant.
+  data_3 = rbind(data_3, data_2)
+}
+
+# Write the preprocessed data.
+write_csv(data_3, file.path(data_path, "data.csv"))
+```
+
+## Agent Predictions
+
+```{r, fig.align="center"}
+# Read in the preprocessed data.
+data_3 = read_csv(file.path(data_path, "data.csv"))
+
+# Define the bootstrap function for the bootstrap statistic.
+compute_mean = function(data, indices) {
+  return(mean(data[indices]))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_mean,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CIs.
+ci = data.frame()
+for (m in unique(data_3$map)) {
+    # Compute the bootstrap for each dependent measure.
+    num_agents_bootstrap = compute_bootstrap(filter(data_3, map==m)$num_agents)
+    
+    # Store the bootstrapped 95% CIs.
+    ci = rbind(ci, data.frame(map=m,
+                              lower=num_agents_bootstrap[4],
+                              upper=num_agents_bootstrap[5]))
+}
+
+# Read in the goal predictions.
+model_0 = read_csv("data/experiment_3/model/predictions/Manhattan/data.csv")
+
+# Perform some basic preprocessing and then z-score the model predictions.
+model_1 = model_0 %>%
+  dplyr::select(-l_1, -l_2) %>%
+  rename(model=p_2) %>%
+  mutate(z_model=scale(model))
+
+# Merge the human and model data. # Join the bootstrapped 95% CIs with the normalized participant judgments.
+data_4 = data_3 %>%
+  group_by(unique_id) %>%
+  rename(human=num_agents) %>%
+  mutate(z_human=scale(human)) %>%
+  ungroup() %>%
+  group_by(map) %>%
+  summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
+  left_join(ci) %>%
+  left_join(model_1)
+
+# Plot the goal comparison.
+plot_0 = data_4 %>%
+  ggplot(aes(x=model, y=mean_human, label=map)) +
+  geom_point(aes(color=substr(map, 0, 2))) +
+  geom_text(vjust=-1.0) +
+  geom_smooth(method="lm", se=TRUE, linetype="dashed", color="black") +
+  # geom_abline() +
+  ggtitle("Model Agent Predictions vs. Participant Agent Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  scale_color_discrete(name="Map") +
+  theme_classic() +
+  theme(plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_0
+```
+
+## TEMP
+
+```{r}
+temp_1 = tibble()
+for (p in 1:length(data_1)) {
+  temp_0 = data.frame(
+    unique_id = data_0$UniqueId[p],
+    age = as.numeric(data_1[p][[1]]$subject_information$age)
+  )
+        
+  temp_1 = rbind(temp_1, temp_0)
+}
+```
+
+## TEMP
+
+```{r}
+annotation_1 = data.frame(
+  label = paste("r = 0.80 (95% CI: 0.36 - 0.94)", sep=""),
+  x = c(0.6),
+  y = c(0.8)
+)
+
+figure_2b = data_4 %>%
+  ggplot(aes(x=model, y=mean_human, label=map)) +
+  geom_point(aes(fill=substr(map, 0, 2)), color="black", pch=21, size=1.5, alpha=0.6) +
+  # geom_text(vjust=-1.0) +
+  geom_smooth(method="lm", se=TRUE, linetype="dashed", color="black") +
+  geom_text(data=annotation_1, aes(x=x, y=y, label=label), color="black", size=geom_text_size) + 
+  # geom_abline() +
+  xlab("Model Predictions") +
+  ylab("Participant Judgments") +
+  scale_fill_discrete(name="Inference Type:") +
+  theme_classic() +
+  theme(aspect.ratio=1,
+        legend.position="right",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=10),
+        axis.title=element_text(size=10),
+        axis.text=element_text(size=9))
+
+
+
+# new_fig = figure_2b + 
+#   geom_text(data=annotation_1, aes(x=x, y=y, label=label), color="black", size=geom_text_size) + 
+#   scale_color_discrete(name="Inference Type:") + 
+#   geom_point(aes(color=substr(map, 0, 2)), color="black", pch=21, size=2)
+# library(cowplot)
+# figure_2 = plot_grid(figure_2a, new_fig, nrow=1, rel_widths=c(0.51, 0.49))
+# figure_2
+ggsave("writing/CogSci 2020/figures/new_plot.pdf", device="pdf", plot=figure_2b,
+       width=3.375, units="in")
+
+```
+
+```{r, echo=FALSE}
+# Compute the correlation between the model predictions and participant judgments.
+cor_0 = cor(data_4$model, data_4$mean_human, method="pearson")
+
+# Compute the correlation and bootstrap the CIs.
+compute_cor = function(data, indices) {
+  return(cor(data$model[indices], data$mean_human[indices], method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CIs.
+ci = compute_bootstrap(data_4)
+ci[4]
+ci[5]
+```
+
+The Pearson correlation in the above plot is `r cor(na.omit(data_4)$mean_human, na.omit(data_4)$model, method="pearson")`.
+
+```{r, fig.align="center"}
+# Plot agent inferences by trial.
+plot_1 = data_4 %>%
+  gather(type, value, mean_human, model) %>%
+  mutate(lower=ifelse(type=="model", NA, lower),
+         upper=ifelse(type=="model", NA, upper)) %>%
+  ggplot(aes(x=type, y=value)) +
+  geom_point(aes(color=type)) +
+  geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.2) +
+  facet_wrap(~map) +
+  scale_x_discrete(name="Map",
+                   limits=c("mean_human", "model"),
+                   labels=c("Human", "Model")) +
+  ylab("Probability of Two Agents") +
+  theme_classic() +
+  theme(legend.position="none",
+        axis.text.x=element_text(hjust=1.0, angle=45))
+plot_1
+```

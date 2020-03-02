@@ -21,6 +21,9 @@ library(boot)
 library(corrplot)
 library(jsonlite)
 library(tidyverse)
+
+# Set up which data is being analyzed.
+data_path = "data/experiment_1/data_0"
 ```
 
 # Pilot
@@ -36,11 +39,8 @@ Revised the introduction.
 #### pilot_6
 -->
 ```{r, echo=FALSE}
-# Set up which pilot is being analyzed.
-pilot_path = "data/experiment_1/data_0"
-
 # Read in the participant data (after manually removing errors).
-data_0 <- read_csv(file.path(pilot_path, "raw_data.csv"), quote="~")
+data_0 <- read_csv(file.path(data_path, "raw_data.csv"), quote="~")
 
 # Read in the MTurk results file.
 # mturk_results = read_csv(file.path(pilot_path, "mturk_results.csv"), col_names=TRUE) %>%
@@ -71,11 +71,25 @@ for (p in 1:length(data_1)) {
 # write_csv(data_3, file.path(pilot_path, "data.csv"))
 ```
 
+## TEMP
+
+```{r}
+temp_1 = tibble()
+for (p in 1:length(data_1)) {
+  temp_0 = data.frame(
+    unique_id = data_0$UniqueId[p],
+    age = as.numeric(data_1[p][[1]]$subject_information$age)
+  )
+        
+  temp_1 = rbind(temp_1, temp_0)
+}
+```
+
 ## Goal Predictions
 
 ```{r, fig.align="center"}
 # Read in the preprocessed data.
-data_3 = read_csv(file.path(pilot_path, "data.csv"))
+data_3 = read_csv(file.path(data_path, "data.csv"))
 
 # Select and normalize the goal judgments.
 data_4 = data_3 %>%
@@ -151,6 +165,28 @@ plot_0 = data_5 %>%
 plot_0
 ```
 
+```{r}
+# Compute the correlation and bootstrap the CIs.
+compute_cor = function(data, indices) {
+  return(cor(data$model[indices], data$mean_human[indices], method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CIs.
+ci_0 = compute_bootstrap(data_5)
+ci_0[4]
+ci_0[5]
+```
+
 The correlation is `r cor(data_5$model, data_5$mean_human, method="pearson")`. If we split up the data by trial, we get:
 
 ```{r, fig.align="center"}
@@ -170,6 +206,80 @@ plot_1 = data_5 %>%
   theme_classic() +
   theme(legend.title=element_text(hjust=0.5))
 plot_1
+```
+
+## TEMP
+
+```{r}
+left_plot = data_5 %>%
+  filter(grepl("ND_", map)) %>%
+  gather(type, value, mean_human, model) %>%
+  ggplot(aes(x=goal, y=value, group=type)) +
+  geom_point(aes(color=type), size=1) +
+  geom_line(aes(color=type), size=0.5) + 
+  geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.4, size=0.5) +
+  facet_wrap(~map, ncol=2) +
+  xlab("Goal") +
+  ylab("Value") +
+  scale_color_discrete(name="",
+                       limits=c("mean_human", "model"),
+                       labels=c("", "")) +
+  theme_classic() +
+  theme(strip.text=element_text(size=28),
+        legend.position="bottom",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=10),
+        axis.title=element_text(size=10),
+        axis.text=element_text(size=9))
+left_plot
+  
+right_plot_0 = data_5 %>% 
+  filter(!grepl("ND_", map)) %>%
+  gather(type, value, mean_human, model) %>%
+  ggplot(aes(x=goal, y=value, group=type)) +
+  geom_point(aes(color=type), size=1) +
+  geom_line(aes(color=type), size=0.5) + 
+  geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.4, size=0.5) +
+  facet_wrap(~map) +
+  xlab("Goal") +
+  ylab("Value") +
+  scale_color_discrete(name="Inference Type",
+                       limits=c("mean_human", "model"),
+                       labels=c("Human", "Model")) +
+  theme_classic() +
+  theme(strip.text=element_text(size=28),
+        legend.position="bottom",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=10),
+        axis.title=element_text(size=10),
+        axis.text=element_text(size=9))
+right_plot_0
+
+right_plot_1 = data_7 %>% 
+  gather(type, value, mean_human, model) %>%
+  ggplot(aes(x=entrance, y=value, group=type)) +
+  geom_point(aes(color=type), size=1) +
+  geom_line(aes(color=type), size=0.5) + 
+  geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.4, size=0.5) +
+  facet_wrap(~map) +
+  xlab("Entrance") +
+  ylab("Value") +
+  scale_color_discrete(name="",
+                       limits=c("mean_human", "model"),
+                       labels=c("", "")) +
+  theme_classic() +
+  theme(strip.text=element_text(size=28),
+        legend.position="bottom",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=10),
+        axis.title=element_text(size=10),
+        axis.text=element_text(size=9),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+right_plot_1
+
+figure_3 = plot_grid(left_plot, right_plot_0, right_plot_1, rel_widths=c(0.25, 0.41, 0.34), nrow=1)
 ```
 
 ## Entrance Predictions
@@ -263,6 +373,29 @@ plot_2 = data_7 %>%
 plot_2
 ```
 
+```{r}
+# Compute the correlation and bootstrap the CIs.
+compute_cor = function(data, indices) {
+  return(cor(data$model[indices], data$mean_human[indices], method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CIs.
+cor_1 = cor(data_7$model, data_7$mean_human, method="pearson")
+cor_1_ci = compute_bootstrap(data_5)
+cor_1_ci[4]
+cor_1_ci[5]
+```
+
 The Pearson correlation is `r cor(data_7$model, data_7$mean_human, method="pearson")`. If we split up the data by trial, we get:
 
 ```{r, fig.align="center"}
@@ -309,7 +442,108 @@ plot_4 = data_8 %>%
 plot_4
 ```
 
-The Pearson correlation is `r cor(data_8$model, data_8$mean_human, method="pearson")`.
+```{r}
+# Bootstrap the CI for correlation.
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$model[indices], data$mean_human[indices], method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CIs.
+cor_2 = cor(data_8$model, data_8$mean_human, method="pearson")
+ci_2 = compute_bootstrap(data_8)
+ci_2[4]
+ci_2[5]
+```
+
+The Pearson correlation is `r cor(data_8$model, data_8$mean_human, method="pearson")` (95% CI: `r paste(ci_cor[4], "-", ci_cor[5], sep="")`.
+
+## TEMP
+
+```{r}
+cor_2 = cor(data_8$model, data_8$mean_human, method="pearson")
+
+cor_2 = round(cor(data_8$model, data_8$mean_human, method="pearson"), 2)
+annotation_0 = data.frame(
+  label = paste("r = ", cor_2, " (95% CI: 0.91 - 0.96)", sep=""),
+  x = c(0.40),
+  y = c(0.75)
+)
+geom_text_size = (5/14) * 10
+
+figure_2a = data_8 %>%
+  ggplot(aes(x=model, y=mean_human, label=map)) +
+  geom_point(aes(fill=type), color="black", pch=21, size=1.5, alpha=0.6) +
+  # geom_text(vjust=-1.0, hjust=-1.0) +
+  geom_smooth(method="lm", se=TRUE, linetype="dashed", color="black") +
+  geom_text(data=annotation_0, aes(x=x, y=y, label=label), color="black", size=geom_text_size) +
+  # ggtitle("Model Predictions vs. Participant Judgments") +
+  xlab("Model Predictions") +
+  # xlim(0, 1) +
+  # ylim(0, 1) +
+  # scale_x_discrete(name="Model Predictions",
+  #                  )
+  ylab("Participant Judgments") +
+  scale_fill_discrete(name="Inference Type:",
+                       limits=c("entrance", "goal"),
+                       labels=c("Entrance", "Goal")) +
+  theme_classic() +
+  theme(aspect.ratio=1,
+        legend.position="right",
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=10),
+        axis.title=element_text(size=10),
+        axis.text=element_text(size=9))
+ggsave("writing/CogSci 2020/figures/figure_2a2.pdf", device="pdf", plot=figure_2a,
+       width=3.375, units="in")
+
+# figure_2b = data_4 %>%
+#   ggplot(aes(x=model, y=mean_human, label=map)) +
+#   geom_point(aes(color=substr(map, 0, 2)), size=2) +
+#   # geom_text(vjust=-1.0) +
+#   geom_smooth(method="lm", se=TRUE, linetype="dashed", color="black") +
+#   # geom_abline() +
+#   xlab("Model Predictions") +
+#   ylab("Participant Judgments") +
+#   scale_color_discrete(name="Grid-world Type:") +
+#   theme_classic() +
+#   theme(legend.position="bottom",
+#         legend.title=element_text(size=10),
+#         legend.text=element_text(size=10),
+#         axis.title=element_text(size=10),
+#         axis.text=element_text(size=9))
+
+# cor_2 = round(cor(data_8$model, data_8$mean_human, method="pearson"), 2)
+annotation_1 = data.frame(
+  label = paste("r = 0.80 (95% CI: 0.29 - 0.94)", sep=""),
+  x = c(0.6),
+  y = c(0.8)
+)
+
+new_fig = figure_2b + 
+  geom_text(data=annotation_1, aes(x=x, y=y, label=label), color="black", size=geom_text_size) + 
+  scale_color_discrete(name="Inference Type:") + 
+  geom_point(aes(color=substr(map, 0, 2)), color="black", pch=21, size=2)
+library(cowplot)
+figure_2 = plot_grid(figure_2a, new_fig, nrow=1, rel_widths=c(0.51, 0.49))
+figure_2
+ggsave("writing/CogSci 2020/figures/new_plot.pdf", device="pdf", plot=figure_2b,
+       # width=6.5, height=5.07, units="in")
+       width=3.375, height=2.535, units="in")
+
+# output at 3.375 in width
+# scatter_plot
+```
 
 Now let's see if we can predict the model error based on how many doors there are in the task. We'll first start with goal inferences.
 
@@ -365,6 +599,22 @@ plot_6 = data_7 %>%
         legend.title=element_text(hjust=0.5))
 plot_6
 ```
+
+## Alternative Model
+
+```{r}
+# Door_d: x1, x2, x3, ...
+# Goal_d: y1, y2, y3, ...
+data_9 = read_csv("imageinferencedata.csv")
+# Goal: A, B, C
+library(lmerTest)
+library(nnet)
+data_10 = data_9 %>%
+  mutate()
+model = glm(data=data_9, max(mean_A, mean_B, mean_C) ~ A_d*B_d*C_d + `1_d`)
+summary(model)
+```
+
 
 ```{r, eval=FALSE, include=FALSE}
 data_4 %>% 
