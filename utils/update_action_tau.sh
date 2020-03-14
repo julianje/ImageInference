@@ -3,6 +3,6 @@
 TAU=$1
 EXPERIMENT=$2
 
-for file in $(find ../stimuli/$EXPERIMENT -maxdepth 1 -type f -name "*.ini"); do
-	sed -Ei "s/actionTau\ =\ [0-9]+.[0-9]+/actionTau\ =\ $TAU/" $file
+for FILE in $(find ../stimuli/$EXPERIMENT/ -maxdepth 1 -type f -name "*.ini"); do
+	sed -Ei "s/actionTau\ =\ [0-9]+.[0-9]+/actionTau\ =\ $TAU/" $FILE
 done

@@ -13,37 +13,41 @@ knitr::opts_knit$set(root.dir=normalizePath("../.."))
 
 # Turn off compile messages and warnings.
 knitr::opts_chunk$set(message=FALSE, warning=FALSE)
+
+# Set the seed.
+set.seed(0)
+
+# Set up the path to the participant data.
+human_path = "data/experiment_3/human/data_0"
+
+# Set up the path to the model data.
+model_path = "data/experiment_3/model/predictions/Manhattan"
 ```
 
-```{r echo=FALSE}
+```{r libraries, echo=FALSE}
 # Import R libraries.
 library(boot)
-library(corrplot)
 library(jsonlite)
 library(tidyverse)
-
-# Set up which data is being analyzed.
-data_path = "data/experiment_3/human/data_0"
 ```
 
-# Pilot
+# Preprocessing
 
-## Preprocessing
-
-```{r, echo=FALSE}
+```{r preprocessing, echo=FALSE}
 # Read in the participant data (after manually removing errors).
-data_0 <- read_csv(file.path(data_path, "raw_data.csv"), quote="~")
+data_0 <- read_csv(file.path(human_path, "raw_data.csv"), quote="~")
 
 # Read in the MTurk results file.
-mturk_results = read_csv(file.path(data_path, "mturk_results.csv"), col_names=TRUE) %>%
-  mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode)))
+mturk_results = read_csv(file.path(human_path, "mturk_results.csv"), col_names=TRUE) %>%
+  mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode))) %>%
+  filter(AssignmentStatus=="Approved")
 
 # Stop if there are duplicate database entries based on the MTurk results file.
-duplicates <- setdiff(data_0$UniqueId, mturk_results$Answer.surveycode)
+duplicates <- setdiff(data_0$unique_id, mturk_results$Answer.surveycode)
 if (length(duplicates) != 0) { stop("There are duplicate entries.") }
 
 # Convert the JSON string into JSON.
-data_1 = lapply(data_0$Results, fromJSON)
+data_1 = lapply(data_0$results, fromJSON)
 
 # Extract the trial information for each participant and stack them.
 data_3 = tibble()
@@ -51,22 +55,23 @@ for (p in 1:length(data_1)) {
   # Trim the map and add the participant ID back in.
   data_2 = data_1[p][[1]]$trials %>%
     as.data.frame() %>%
-    mutate(map=gsub(".png", "", map), unique_id=data_0$UniqueId[p],
-           wrong_attempts=data_1[p][[1]]$catch_trials$wrong_attempts)
+    mutate(map=gsub(".png", "", map), unique_id=data_0$unique_id[p],
+           wrong_attempts=data_1[p][[1]]$catch_trials$wrong_attempts,
+           age=data_1[p][[1]]$subject_information$age)
 
   # Stack the trial information for the current participant.
   data_3 = rbind(data_3, data_2)
 }
 
 # Write the preprocessed data.
-write_csv(data_3, file.path(data_path, "data.csv"))
+write_csv(data_3, file.path(human_path, "data.csv"))
 ```
 
-## Agent Predictions
+# Agent Predictions
 
 ```{r, fig.align="center"}
 # Read in the preprocessed data.
-data_3 = read_csv(file.path(data_path, "data.csv"))
+data_3 = read_csv(file.path(human_path, "data.csv"))
 
 # Define the bootstrap function for the bootstrap statistic.
 compute_mean = function(data, indices) {
@@ -96,15 +101,15 @@ for (m in unique(data_3$map)) {
 }
 
 # Read in the goal predictions.
-model_0 = read_csv("data/experiment_3/model/predictions/Manhattan/data.csv")
+model_0 = read_csv(file.path(model_path, "one_goal_per_path/data.csv"))
 
 # Perform some basic preprocessing and then z-score the model predictions.
 model_1 = model_0 %>%
-  dplyr::select(-l_1, -l_2) %>%
+  select(-l_1, -l_2) %>%
   rename(model=p_2) %>%
   mutate(z_model=scale(model))
 
-# Merge the human and model data. # Join the bootstrapped 95% CIs with the normalized participant judgments.
+# Merge the z-scored participant judgments with the bootstrapped 95% CIs and the model predictions.
 data_4 = data_3 %>%
   group_by(unique_id) %>%
   rename(human=num_agents) %>%
@@ -127,64 +132,10 @@ plot_0 = data_4 %>%
   ylab("Human Judgments") +
   scale_color_discrete(name="Map") +
   theme_classic() +
-  theme(plot.title=element_text(hjust=0.5),
+  theme(aspect.ratio=1.0,
+        plot.title=element_text(hjust=0.5),
         legend.title=element_text(hjust=0.5))
 plot_0
-```
-
-## TEMP
-
-```{r}
-temp_1 = tibble()
-for (p in 1:length(data_1)) {
-  temp_0 = data.frame(
-    unique_id = data_0$UniqueId[p],
-    age = as.numeric(data_1[p][[1]]$subject_information$age)
-  )
-        
-  temp_1 = rbind(temp_1, temp_0)
-}
-```
-
-## TEMP
-
-```{r}
-annotation_1 = data.frame(
-  label = paste("r = 0.80 (95% CI: 0.36 - 0.94)", sep=""),
-  x = c(0.6),
-  y = c(0.8)
-)
-
-figure_2b = data_4 %>%
-  ggplot(aes(x=model, y=mean_human, label=map)) +
-  geom_point(aes(fill=substr(map, 0, 2)), color="black", pch=21, size=1.5, alpha=0.6) +
-  # geom_text(vjust=-1.0) +
-  geom_smooth(method="lm", se=TRUE, linetype="dashed", color="black") +
-  geom_text(data=annotation_1, aes(x=x, y=y, label=label), color="black", size=geom_text_size) + 
-  # geom_abline() +
-  xlab("Model Predictions") +
-  ylab("Participant Judgments") +
-  scale_fill_discrete(name="Inference Type:") +
-  theme_classic() +
-  theme(aspect.ratio=1,
-        legend.position="right",
-        legend.title=element_text(size=10),
-        legend.text=element_text(size=10),
-        axis.title=element_text(size=10),
-        axis.text=element_text(size=9))
-
-
-
-# new_fig = figure_2b + 
-#   geom_text(data=annotation_1, aes(x=x, y=y, label=label), color="black", size=geom_text_size) + 
-#   scale_color_discrete(name="Inference Type:") + 
-#   geom_point(aes(color=substr(map, 0, 2)), color="black", pch=21, size=2)
-# library(cowplot)
-# figure_2 = plot_grid(figure_2a, new_fig, nrow=1, rel_widths=c(0.51, 0.49))
-# figure_2
-ggsave("writing/CogSci 2020/figures/new_plot.pdf", device="pdf", plot=figure_2b,
-       width=3.375, units="in")
-
 ```
 
 ```{r, echo=FALSE}
@@ -212,7 +163,7 @@ ci[4]
 ci[5]
 ```
 
-The Pearson correlation in the above plot is `r cor(na.omit(data_4)$mean_human, na.omit(data_4)$model, method="pearson")`.
+The Pearson correlation in the above plot is _r_ = `r cor(na.omit(data_4)$mean_human, na.omit(data_4)$model, method="pearson")`.
 
 ```{r, fig.align="center"}
 # Plot agent inferences by trial.
