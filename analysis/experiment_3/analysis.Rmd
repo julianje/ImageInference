@@ -33,7 +33,7 @@ library(tidyverse)
 
 # Preprocessing
 
-```{r preprocessing, echo=FALSE}
+```{r preprocessing}
 # Read in the participant data (after manually removing errors).
 data_0 <- read_csv(file.path(human_path, "raw_data.csv"), quote="~")
 
@@ -67,9 +67,9 @@ for (p in 1:length(data_1)) {
 write_csv(data_3, file.path(human_path, "data.csv"))
 ```
 
-# Agent Predictions
+# Number of Agents Inference
 
-```{r, fig.align="center"}
+```{r num_agents_inference, fig.align="center"}
 # Read in the preprocessed data.
 data_3 = read_csv(file.path(human_path, "data.csv"))
 
@@ -138,11 +138,8 @@ plot_0 = data_4 %>%
 plot_0
 ```
 
-```{r, echo=FALSE}
-# Compute the correlation between the model predictions and participant judgments.
-cor_0 = cor(data_4$model, data_4$mean_human, method="pearson")
-
-# Compute the correlation and bootstrap the CIs.
+```{r num_agents_correlation, echo=FALSE}
+# Define the bootstrap function for the bootstrap statistic.
 compute_cor = function(data, indices) {
   return(cor(data$model[indices], data$mean_human[indices], method="pearson"))
 }
@@ -157,15 +154,18 @@ compute_bootstrap = function(data) {
   return(boot.ci(simulations, type="bca")$bca)
 }
 
-# Compute the bootstrapped 95% CIs.
-ci = compute_bootstrap(data_4)
-ci[4]
-ci[5]
+# Compute the correlation between the model predictions and participant judgments.
+cor_0 = cor(data_4$model, data_4$mean_human, method="pearson")
+cor_0_bootstrap = compute_bootstrap(data_4)
+cor_0_ci = data.frame(
+  lower=cor_0_bootstrap[4],
+  upper=cor_0_bootstrap[5]
+)
 ```
 
-The Pearson correlation in the above plot is _r_ = `r cor(na.omit(data_4)$mean_human, na.omit(data_4)$model, method="pearson")`.
+The Pearson correlation is _r_ = `r round(cor_0, 2)` (95% CI: `r round(cor_0_ci$lower, 2)`-`r round(cor_0_ci$upper, 2)`). Next, we generate comparisons for each trial.
 
-```{r, fig.align="center"}
+```{r num_agents_inference_per_trial, fig.align="center"}
 # Plot agent inferences by trial.
 plot_1 = data_4 %>%
   gather(type, value, mean_human, model) %>%
@@ -175,12 +175,13 @@ plot_1 = data_4 %>%
   geom_point(aes(color=type)) +
   geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.2) +
   facet_wrap(~map) +
-  scale_x_discrete(name="Map",
+  scale_x_discrete(name="Type",
                    limits=c("mean_human", "model"),
                    labels=c("Human", "Model")) +
   ylab("Probability of Two Agents") +
   theme_classic() +
-  theme(legend.position="none",
+  theme(aspect.ratio=1.0,
+        legend.position="none",
         axis.text.x=element_text(hjust=1.0, angle=45))
 plot_1
 ```
