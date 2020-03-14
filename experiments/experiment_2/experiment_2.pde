@@ -40,8 +40,8 @@ void setup(){
   participant = -1;
   for (String file : files) { //iterate to get the new participant numbers. Checks by looking at the participant data file name (which contains the participant ID)
     try {
-      if (Integer.parseInt(file.substring(5, file.length() - 4)) > participant) {
-        participant = Integer.parseInt(file.substring(5, file.length() - 4));
+      if (Integer.parseInt(file.substring(0, file.length() - 4)) > participant) {
+        participant = Integer.parseInt(file.substring(0, file.length() - 4));
       }
     }
     catch(Exception e) {

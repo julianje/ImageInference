@@ -1,2 +1,0 @@
-python main.py D1_0 '64 65' '4 5-4 7'
-python main.py P1_0 '64 65' '4 4-5 6'

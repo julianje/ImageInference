@@ -1,10 +1,10 @@
 ---
-  title: "Image Inference - Experiment 2"
+title: "Image Inference - Experiment 2"
 output:
   html_document:
-  code_folding: hide
-df_print: paged
-pdf_document: default
+    code_folding: hide
+    df_print: paged
+  pdf_document: default
 ---
   
 ```{r setup, echo=FALSE}
@@ -13,20 +13,24 @@ knitr::opts_knit$set(root.dir=normalizePath("../.."))
 
 # Turn off compile messages and warnings.
 knitr::opts_chunk$set(message=FALSE, warning=FALSE)
+
+# Set the seed.
+set.seed(0)
+
+# Set up the path to the participant and model data.
+data_path = "data/experiment_2/model/"
 ```
 
-```{r echo=FALSE}
+```{r libraries, echo=FALSE}
 # Import R libraries.
 library(tidyverse)
-
-# Set up which data is being analyzed.
-# data_path = "data/experiment_2/data_0"
 ```
 
-# Pilot
+# Model Comparison
 
 ```{r, echo=FALSE}
-data_0 = read_csv("analysis/experiment_2/analysis.csv")
+# Read in the model evaluations of the participant-generated paths.
+data_0 = read_csv(file.path(data_path, "bayes_factors.csv"))
 
 # Compute the mean Bayes factor within participants.
 data_1 = data_0 %>%

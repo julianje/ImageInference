@@ -1,0 +1,7 @@
+# pilot_4
+
+- Swapped out the cookie for I thought I had the wrong stimuli for `PX_PX_0`, but it turns out that was the right one. I ended up cancelling the task at $n=14$.
+
+# pilot_5
+
+- Revised the introduction.

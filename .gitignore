@@ -1,3 +1,4 @@
-writing/
 mturk_results.csv
-stimuli.docx
+*.docx
+*.pptx
+writing/

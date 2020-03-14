@@ -21,7 +21,7 @@ if (!$con){
     die("Connection failed: " . mysqli_connect_error() . " Please email colin.jacobs@yale.edu with this message.");
 }
 
-$query = "INSERT INTO ImageInference_Exp1 (UniqueId, Results, CompletionDate) VALUES ('$Id', '$Result', '$my_date')";
+$query = "INSERT INTO ImageInference_Exp1 (unique_id, results, completion_date) VALUES ('$Id', '$Result', '$my_date')";
 if (!mysqli_query($con, $query)){
 	echo "Could not update database. Please email colin.jacobs@yale.edu with the following message:<br>" . mysqli_error($con);
 }
