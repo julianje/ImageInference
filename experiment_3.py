@@ -1,182 +1,128 @@
-from Bishop import *
-
 import csv
 import itertools as it
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-#############
-# Functions #
-#############
+from Bishop import *
 
-# Compute the state from the x- and y-coordinates.
-def TranslateState(Agent, coords): return (coords[0])*Agent.Plr.Map.mapwidth+coords[1]
+# Transform x- and y-coordinates into a state representation.
+def transform_state(agent, coords):
+	return (coords[0]*agent.Plr.Map.mapwidth) + coords[1]
 
-# Computes the scene likelihood, p(s | A=1), and returns an array of size: rollouts x 5.
-def SceneLikelihoodOneAgent(Observer, Scene, rollouts=10000, verbose=True, Stage="Entering"):
-	Simulations = Observer.SimulateAgents(rollouts, ResampleAgent=False, Simple=False, Verbose=verbose, replan=False)
-	if Stage=="Entering":
-		# Generate paths for this agent.
-		SceneMatches = np.zeros(rollouts)
-		for i in range(len(Simulations.States)):
-			# Take the set intersection of the observations and this path.
-			Intersection = set(Scene).intersection(set(Simulations.States[i][0:len(Simulations.States[i])/2]))
+# Computes the likelihood that one agent was in the room based on the 
+# observations. 
+# NOTE: This function assumes agents are entering the room.
+def scene_likelihood_one_agent(agent, observations, num_paths):
+	# Generate paths according to the current map and policy.
+	simulations = agent.SimulateAgents(num_paths, ResampleAgent=False, 
+		Simple=False, Verbose=False, replan=False)
 
-			# Check if the union of the set intersections is equal to the observations.
-			if Intersection == set(Scene):
-				SceneMatches[i] = 1.0
-			else:
-				SceneMatches[i] = 0.0
-	else:
-		sys.exit("Other stages not yet supported.")
+	# Iterate through each path and check if it's consistent with the 
+	# observations.
+	scene_matches = np.zeros(num_paths)
+	for i in range(len(simulations.States)):
+		# Take the set intersection of the observations and this path.
+		intersection = set(observations).intersection(set( \
+			simulation.States[i][0:lne(simulation.States[i])/2]))
+
+		# Check if this path explains the observations.
+		scene_matches = 1.0 if intersection == set(observations) else 0.0
+
 	return([
-		Observer.Plr.Agent.rewards, 
-		Observer.Plr.GetPlanDistribution(), 
-		sum(SceneMatches)*1.0/rollouts, 
-		SceneMatches, 
-		Simulations
+		agent.Plr.Agent.rewards,
+		agent.Plr.GetPlanDistribution(),
+		sum(scene_matches)*1.0/num_paths,
+		scene_matches,
+		simulations
 	])
 
-# Computes the scene likelihood, p(s | A=2) and return an array of size: rollouts x 2 x 5.
-def SceneLikelihoodTwoAgents(Observer0, Observer1, Scene, rollouts=10000, verbose=True, Stage="Entering"):
-	Simulations0 = Observer0.SimulateAgents(rollouts, ResampleAgent=False, Simple=False, Verbose=verbose, replan=False)
-	Simulations1 = Observer1.SimulateAgents(rollouts, ResampleAgent=False, Simple=False, Verbose=verbose, replan=False)
-	if Stage=="Entering":
-		# Set up probabilities of cookies being dropped according to a Poisson distribution.
-		# P_0 = 0.22
-		# P_1 = 0.33
-		# P_2 = 0.25
+# Computes the likelihood that two agents were in the room based on the 
+# observations. 
+# NOTE: This function assumes agents are entering the room.
+def scene_likelihood_two_agents(agent_0, agent_1, observations, num_paths):
+	# Generate paths according to the current map and policy.
+	simulations_0 = agent_0.SimulateAgents(rollouts, ResampleAgent=False, \
+		Simple=False, Verbose=False, replan=False),
+	simulations_1 = agent_1.SimulateAgents(rollouts, ResampleAgent=False, \
+		Simple=False, Verbose=False, replan=False)
 
-		# Generate paths for both agents independently.
-		SceneMatches = np.zeros(rollouts)
-		for i in range(len(Simulations0.States)):
-			# Randomly resample one of the paths if they are the same.
-			# counter = 0
-			# if Simulations0.States[i] == Simulations1.States[i]:
-			# 	counter += 1
-			# 	SceneMatches[i] = 0.0
-			
-			# counter = 0
-			# while Simulations0.States[i] == Simulations1.States[i]:
-			# 	counter += 1
-			# 	new_simulations = Observer1.SimulateAgents(1, ResampleAgent=False, Simple=False, Verbose=verbose, replan=False)
-			# 	Simulations1.Actions[i] = new_simulations.Actions[0]
-			# 	Simulations1.States[i] = new_simulations.States[0]
-			# 	if counter > 10: 
-			# 		print("This is taking a while...")
-			# print(counter)
+	# Iterate through each pair of pahts and check if they're consistent with 
+	# the observations.
+	scene_matches = np.zeros(num_paths)
+	for i in range(len(simulations[0].States)):
+		# Take the set intersection of the observations and both paths.
+		intersection_0 = set(observations).intersection(set( \
+			simulations_0.States[i][0:len(simulations_0.States[i])/2]))
+		intersection_1 = set(observations).intersection(set( \
+			simulations_1.States[i][0:len(simulations_1.States[i])/2]))
 
-			# Take the set intersection of the observations and this pair of paths.
-			Intersection0 = set(Scene).intersection(set(Simulations0.States[i][0:len(Simulations0.States[i])/2]))
-			Intersection1 = set(Scene).intersection(set(Simulations1.States[i][0:len(Simulations1.States[i])/2]))
+		# Check if each path explains exactly one of the observations.
+		if (len(intersection_0) == 1 and len(intersection_1) == 1) \
+			and intersection_0.union(intersection_1) == set(observations):
+			scene_matches[i] = 1.0
+		else:
+			scene_matches[i] = 0.0
 
-			# # Check if one path explains both observations while the other explains neither.
-			# if (len(Intersection0) == 2 and len(Intersection1) == 0) \
-			# 	or (len(Intersection0) == 0 and len(Intersection1) == 2):
-			# 	SceneMatches[i] = P_0 * P_2
-
-			# Check if each path explains exactly one of the observations.
-			if (len(Intersection0) == 1 and len(Intersection1) == 1) \
-				and Intersection0.union(Intersection1) == set(Scene):
-				# SceneMatches[i] = P_1 * P_1
-				SceneMatches[i] = 1.0
-			else:
-				SceneMatches[i] = 0.0
-			# # Check if one path explains both observations and the other path explains only one.
-			# elif (len(Intersection0) == 1 and len(Intersection1) == 2) \
-			# 	or (len(Intersection0) == 2 and len(Intersection1) == 1):
-			# 	SceneMatches[i] = (P_0*P_2) + (P_1*P_1)
-
-			# # Check if both paths explain both observations.
-			# elif Intersection0 == set(Scene) and Intersection1 == set(Scene):
-			# 	SceneMatches[i] = (2*(P_0*P_2)) + (P_1*P_1)
-			# else:
-			# 	SceneMatches[i] = 0.0
-	else:
-		sys.exit("Other stages not yet supported.")
 	return([
 		[
-			Observer0.Plr.Agent.rewards, 
-			Observer0.Plr.GetPlanDistribution(), 
-			sum(SceneMatches)*1.0/rollouts, 
-			SceneMatches,
-			Simulations0
+			agent_0.Plr.Agent.rewards, 
+			agent_0.Plr.GetPlanDistribution(), 
+			sum(scene_matches)*1.0/num_paths, 
+			scene_matches,
+			simulations_0
 		], 
 		[
-			Observer1.Plr.Agent.rewards, 
-			Observer1.Plr.GetPlanDistribution(), 
-			sum(SceneMatches)*1.0/rollouts, 
-			SceneMatches, 
-			Simulations1
+			agent_1.Plr.Agent.rewards, 
+			agent_1.Plr.GetPlanDistribution(), 
+			sum(scene_matches)*1.0/num_paths, 
+			scene_matches, 
+			simulations_1
 		]
 	])
 
-##############
-# Parameters #
-##############
-
 # Number of reward functions to sample.
-Samples = 1000
+samples = 1000
 
 # Number of paths to sample (per reward function).
-rollouts = 1000
+num_paths = 1000
 
 # Determine how much information we want to output.
 verbose = False
 
-# Set whether we are analyzing "entering" paths (entrance to goal), "leaving" paths (goal to entrance), or both.
-Stage = "Entering"
-
-# Set whether agents are allowed to move diagonally.
-diagonal = False
-
 # Set the path for saving data.
-path = "data/experiment_3/model/predictions/" + ("diagonal/" if diagonal else "Manhattan/")
+path = "data/experiment_3/model/predictions/"
 
 # Set whether we are using the cluster or not, then load the trial information.
-TrialName = sys.argv[1]
-World = sys.argv[1]
-Doors = [[int(num) for num in pair.split(" ")] for pair in sys.argv[2].split("-")]
-Observation = [[int(num) for num in pair.split(" ")] for pair in sys.argv[3].split("-")]
+world = sys.argv[1]
+doors = [[int(num) for num in pair.split(" ")] for pair in sys.argv[2].split("-")]
+observations = [[int(num) for num in pair.split(" ")] for pair in sys.argv[3].split("-")]
 
-#########
-# Model #
-#########
 
-Agents = [
-	LoadObserver("stimuli/experiment_3/"+World, Silent=not verbose),
-	LoadObserver("stimuli/experiment_3/"+World, Silent=not verbose)
-]
+agent_0 = LoadObserver("stimuli/experiment_3/"+world, Silent=True),
+agent_1 = LoadObserver("stimuli/experiment_3/"+world, Silent=True)
 Scene = [TranslateState(Agents[0], Obs) for Obs in Observation]
-ResultsOneAgent = [-1] * Samples
-ResultsTwoAgents = [-1] * Samples
+results_one_agent = [-1] * samples
+results_two_agents = [-1] * samples
 for i in range(Samples):
-	sys.stdout.write("Reward function #"+str(i+1)+"\n")
-	# Agents[0].SetStartingPoint(Doors[0][0], Verbose=False)
-	# Agents[0].Plr.Map.ExitState = Doors[0][1]
-	# Agents[1].SetStartingPoint(Doors[1][0], Verbose=False)
-	# Agents[1].Plr.Map.ExitState = Doors[1][1]
-	for Agent in Agents:
-		States = random.choice(Doors)
-		Agent.SetStartingPoint(States[0], Verbose=False)
-		Agent.Plr.Map.ExitState = States[1]
-		Agent.Plr.Agent.ResampleAgent()
-		# while np.argmax(Agent.Plr.Agent.rewards) != 2: # ONLY run this if fixing the reward at a specific value (this can potentially run forever...)
-		# 	Agent.Plr.Agent.ResampleAgent()
-		# Run the planner manually since SceneLikelihood has planning turned off on SimulateAgents.
-		Agent.Plr.Prepare(Validate=False) # Don't check for inconsistencies in model so that code runs faster.
-	# Make sure the second agent doesn't go for the same object as the first agent.
-	# Agents[1].Plr.Utilities[np.argmax(Agents[0].Plr.Utilities)] = 0.0
-	# print(Agents[0].Plr.Utilities, Agents[1].Plr.Utilities)
-	
-	# Agents[0].Plr.Agent.rewards = [0.0, 0.0, 100.0]
-	# Agents[1].Plr.Agent.rewards = [0.0, 100.0, 0.0]
-	# Agents[0].Plr.Prepare(Validate=False)
-	# Agents[1].Plr.Prepare(Validate=False)
+	print("Reward function #"+str(i+1))
 
-	ResultsOneAgent[i] = SceneLikelihoodOneAgent(Agents[0], Scene, rollouts, verbose, Stage=Stage)
-	ResultsTwoAgents[i] = SceneLikelihoodTwoAgents(Agents[0], Agents[1], Scene, rollouts, verbose, Stage=Stage)
+	door_0 = random.choice(doors)
+	agent_0.SetStartingPoint(door_0[0], Verbose=False)
+	agent_0.Plr.Map.ExitState = door_0[1]
+	agent_0.Plr.Agent.ResampleAgent()
+	agent_1.Plr.Prepare() # Maybe set "Validate=False"
+
+	door_1 = random.choice(doors)
+	agent_1.SetStartingPoint(door_1[0], Verbose=False)
+	agent_1.Plr.Map.ExitState = door_1[1]
+	agent_1.Plr.Agent.ResampleAgent()
+	agent_1.Plr.Prepare() # Maybe set "Validate=False"
+
+	results_one_agent[i] = scene_likelihood_one_agent(agents_0, observations, \
+		num_paths)
+	results_two_agents[i] = scene_likelihood_two_agents(agent_0, agent_1, \
+		observations, num_paths)
 
 # Debugging
 TotalPlanDistribution = [0, 0, 0]
@@ -362,6 +308,6 @@ print(MeanLikelihoodOneAgent, MeanLikelihoodTwoAgents)
 Posterior = MeanLikelihoodTwoAgents / (MeanLikelihoodOneAgent+MeanLikelihoodTwoAgents)
 
 # Write the data to a file.
-with open(path+TrialName+".csv", "w") as file:
+with open(path+world+".csv", "w") as file:
 	writer = csv.writer(file)
-	writer.writerow([TrialName, MeanLikelihoodOneAgent, MeanLikelihoodTwoAgents, Posterior])
+	writer.writerow([world, MeanLikelihoodOneAgent, MeanLikelihoodTwoAgents, Posterior])

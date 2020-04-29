@@ -124,7 +124,7 @@ data_4 = data_3 %>%
 plot_0 = data_4 %>%
   ggplot(aes(x=model, y=mean_human, label=map)) +
   geom_point(aes(color=substr(map, 0, 2))) +
-  geom_text(vjust=-1.0) +
+  # geom_text(vjust=-1.0) +
   geom_smooth(method="lm", se=TRUE, linetype="dashed", color="black") +
   # geom_abline() +
   ggtitle("Model Agent Predictions vs. Participant Agent Judgments") +

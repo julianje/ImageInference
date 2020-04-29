@@ -18,15 +18,8 @@ P(actions | scene) = sum(P(actions, rewards | scene)) = sum(P(actions | rewards,
 - `experiment_2`: path reconstruction
 - `experiment_3`: inferring number of agents in a room
 
-# TODO
+# TO-DO
 
-- [ ] Generate diagonal predictions
 - [ ] Fix/document correct answers in `experiment_1_utils.js`
 - [ ] Fix `end.php`
-- [ ] Pilot experiment_2
-- [ ] Analyze experiment_2 results
-- [ ] Pilot experiment_3
-- [ ] Analyze experiment_3 results
-- [ ] Compute correlation between number of sampled paths required to achieve minimal model error and the error between participant data and model predictions
-	- Make a histogram of samples/paths with positive probability (a bunch of paths with even prob. means more participant uncertainty)
 - [ ] Clean up OSF repository

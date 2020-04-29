@@ -1,6 +1,5 @@
 var j = 0;
 var wrong_attempts = 0;
-var wrong_objective = 0;
 
 function make_slides(f) {
   var slides = {};
@@ -23,7 +22,7 @@ function make_slides(f) {
     });
   }
 
-// Set up the catch trial slide.
+  // Set up the catch trial slide.
   slides.catch_trial = slide({
     name: "catch_trial",
     start: function() {
@@ -84,13 +83,13 @@ function make_slides(f) {
       exp.target_4 = $("input[name='question_4']:checked").val();
       exp.target_5 = $("input[name='question_5']:checked").val();
 
-      // If a participant fails to answer every question.
+      // Runs if the participant fails to answer every question.
       if ((exp.target_0 === undefined) || (exp.target_1 === undefined) || (exp.target_2 === undefined) ||
           (exp.target_3 === undefined) || (exp.target_4 === undefined) || (exp.target_5 === undefined)) {
           $(".catch_error").show();
       }
 
-      // If a participant answers any question incorrectly.
+      // Runs if the participant answers any question incorrectly.
       else if ((exp.target_0 != "0") || (exp.target_1 != "0") || (exp.target_2 != "1") || 
                (exp.target_3 != "0") || (exp.target_4 != "1") || (exp.target_5 != "1")) {
         if (wrong_attempts == 1) { 
@@ -108,6 +107,54 @@ function make_slides(f) {
           $(".first_fail").show();
         }
       }
+      else { exp.go(); }
+    }
+  });
+
+  // Set up the forwarding slide.
+  slides.forwarding = slide({
+    name: "forwarding",
+    start: function() {
+      $(".forwarding_error_0").hide();
+      $(".forwarding_error_1").hide();
+
+      $(".forwarding_slide").html(
+        "<p>" +
+        "To access the task, please click on the link below. This link will open the task on a new tab/window " +
+        "(depending on your browser settings). When you've reached the end of the task, you'll receive a code that " +
+        "you need to paste in the box below in order to continue. <b>This code is not the code you submit to " +
+        "MTurk.</b> After you enter the code and hit the Continue button, there will be one final slide with " +
+        "demographic questions that help us understand your answers. You'll receive your MTurk code after that " +
+        "slide." +
+        "</p>" +
+        "<p>" +
+        "<a href=\"https://compdevlab.yale.edu/studies/lopez-brau/ImageInference/experiments/experiment_2/" +
+        "empty-example/index.html\" target=\"_blank\">Click here to access the task.</a>" +
+        "</p>" +
+        "<p>" +
+        "<label for=\"experiment_code\">" +
+        "Enter your experiment code here:" +
+        "</label>" +
+        "<br>" +
+        "<input type=\"text\" name=\"experiment_code\">" +
+        "<br>" +
+        "</p>");
+    },
+    button: function() {
+      exp.experiment_code = $("input[name='experiment_code']").val();
+
+      // Runs if a participant fails to enter an experiment code.
+      if (exp.experiment_code === "") {
+        $(".forwarding_error_1").hide();
+        $(".forwarding_error_0").show();
+      }
+
+      // Runs if a participant enters an experiment code whose length is less than
+      // the total number of trials.
+      else if (exp.experiment_code.length !== 10) {
+        $(".forwarding_error_0").hide();
+        $(".forwarding_error_1").show();
+      }
       else {
         exp.catch_trials.push({
           "question_0": exp.question[0],
@@ -122,7 +169,8 @@ function make_slides(f) {
           "target_4": exp.target_4,
           "question_5": exp.question[5],
           "target_5": exp.target_5,
-          "wrong_attempts": wrong_attempts
+          "wrong_attempts": wrong_attempts,
+          "experiment_code": exp.experiment_code
         });
         exp.go();
       }
@@ -174,7 +222,7 @@ function init() {
   // Set up the payment amount and Unique Turker.
   exp.time = 15;
   $(".time").html(exp.time);
-  $(".payment").html("$" + (exp.time*0).toPrecision(3));
+  $(".payment").html("$" + (exp.time/60*8.00).toPrecision(3));
   repeatWorker = false;
   (function() {
     var ut_id = "lopez-brau_06-18-2019_ImageInference";
@@ -216,6 +264,7 @@ function init() {
     "introduction_7", 
     "introduction_8", 
     "catch_trial",
+    "forwarding",
     "subj_info",
     "thanks"
   ]; 

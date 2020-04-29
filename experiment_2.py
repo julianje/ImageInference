@@ -1,14 +1,17 @@
-from Bishop import *
-
 import csv
 import pandas as pd
 
+from Bishop import *
+
+# Initialize which data we're using.
+DATA = sys.argv[1]
+
 # Initialize which participant we're processing (we're parallelizing outside 
 # of this script to handle multiple participants).
-PARTICIPANT = sys.argv[1]
+PARTICIPANT = sys.argv[2]
 
 # Initialize the number of reward functions we want to sample.
-NUM_SAMPLES = int(sys.argv[2])
+NUM_SAMPLES = int(sys.argv[3])
 
 # Initialize a list of dictionaries that links maps to their doors and 
 # observations.
@@ -59,15 +62,15 @@ def transform_state(agent, coords):
 	return (coords[0]*agent.Plr.Map.mapwidth) + coords[1]
 
 # Import the participant-generated paths.
-data_0 = pd.read_csv("data/experiment_2/human/data_0/"+PARTICIPANT+".csv")
+data_0 = pd.read_csv("data/experiment_2/human/"+DATA+"/"+PARTICIPANT+".csv")
 
 # Open a file for saving the results. Analysis and plotting will be done in R.
-file = open("data/experiment_2/model/"+PARTICIPANT+".csv", "w")
+file = open("data/experiment_2/model/"+DATA+"/"+PARTICIPANT+".csv", "w")
 writer = csv.writer(file, delimiter=",", lineterminator="\n")
 writer.writerow(["participant", "map", "bayes_factor"])
 
-# Iterate through each participant (if we have multiple) and compute the 
-# Bayes factor of their paths on each trial.
+# Iterate through each participant (if we have multiple per file) and compute 
+# the Bayes factor of their paths on each trial.
 for participant in data_0["participant"].unique():
 	data_1 = data_0[data_0["participant"].isin([participant])]
 	for world in data_1["map"]:
