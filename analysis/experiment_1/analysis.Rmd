@@ -32,8 +32,6 @@ library(nnet)
 library(tidyverse)
 ```
 
-# Preprocessing
-
 ```{r preprocessing}
 # Read in the participant data (after manually removing errors).
 data_0 <- read_csv(file.path(human_path, "raw_data.csv"), quote="~")

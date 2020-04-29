@@ -5,14 +5,12 @@ if (isset($_SESSION['Id'])){
 	$Id = $_SESSION['Id'];
 }
 else{
-	$Id = substr(str_shuffle(str_repeat('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',5)),0,7);
+	$Id = substr(str_shuffle(str_repeat('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',5)),0,5);
 	$_SESSION['Id'] = $Id;
 }
 
 #Save new data point
 $Result=$_POST['ExperimentResult'];
-
-#echo $Result;
 
 $my_date = date("Y-m-d H:i:s");
 
@@ -34,7 +32,7 @@ mysqli_close($con);
 	<center> Thank you for participating! Insert the following code in MTurk to receive payment:
 </h2>
 <center>
-<h1><br><br> <?php echo "G3" . $Id;?></h1></center>
+<h1><br><br> <?php echo "G3aN2" . $Id;?></h1></center>
 </center>
 </body>
 </html>

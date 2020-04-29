@@ -271,7 +271,7 @@ function init() {
   // Set up the payment amount and Unique Turker.
   exp.time = 10;
   $(".time").html(exp.time);
-  $(".payment").html("$" + (exp.time*6/60).toPrecision(3));
+  $(".payment").html("$" + (exp.time/60*6.00).toPrecision(3));
   repeatWorker = false;
   (function() {
     var ut_id = "lopez-brau_06-18-2019_ImageInference";
