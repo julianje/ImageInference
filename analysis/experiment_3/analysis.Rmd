@@ -14,11 +14,14 @@ knitr::opts_knit$set(root.dir=normalizePath("../.."))
 # Turn off compile messages and warnings.
 knitr::opts_chunk$set(message=FALSE, warning=FALSE)
 
-# Set the seed.
-set.seed(0)
+# Set the seed value.
+seed = 0
+
+# Set up which data iteration we're analyzing.
+data = "data_0"
 
 # Set up the path to the participant data.
-human_path = "data/experiment_3/human/data_0"
+human_path = file.path("data/experiment_3/human/", data)
 
 # Set up the path to the model data.
 model_path = "data/experiment_3/model/predictions/Manhattan"
@@ -35,7 +38,7 @@ library(tidyverse)
 
 ```{r preprocessing}
 # Read in the participant data (after manually removing errors).
-data_0 <- read_csv(file.path(human_path, "raw_data.csv"), quote="~")
+data_0 = read_csv(file.path(human_path, "raw_data.csv"), quote="~")
 
 # Read in the MTurk results file.
 mturk_results = read_csv(file.path(human_path, "mturk_results.csv"), col_names=TRUE) %>%
@@ -50,15 +53,18 @@ if (length(duplicates) != 0) { stop("There are duplicate entries.") }
 data_1 = lapply(data_0$results, fromJSON)
 
 # Extract the trial information for each participant and stack them.
+age = c()
 data_3 = tibble()
 for (p in 1:length(data_1)) {
   # Trim the map and add the participant ID back in.
   data_2 = data_1[p][[1]]$trials %>%
     as.data.frame() %>%
     mutate(map=gsub(".png", "", map), unique_id=data_0$unique_id[p],
-           wrong_attempts=data_1[p][[1]]$catch_trials$wrong_attempts,
-           age=data_1[p][[1]]$subject_information$age)
+           wrong_attempts=data_1[p][[1]]$catch_trials$wrong_attempts)
 
+  # Extract and store this participant's age.
+  age = c(age, as.integer(data_1[p][[1]]$subject_information$age))
+  
   # Stack the trial information for the current participant.
   data_3 = rbind(data_3, data_2)
 }
@@ -89,6 +95,7 @@ compute_bootstrap = function(data) {
 }
 
 # Compute the bootstrapped 95% CIs.
+set.seed(seed)
 ci = data.frame()
 for (m in unique(data_3$map)) {
     # Compute the bootstrap for each dependent measure.
@@ -155,6 +162,7 @@ compute_bootstrap = function(data) {
 }
 
 # Compute the correlation between the model predictions and participant judgments.
+set.seed(seed)
 cor_0 = cor(data_4$model, data_4$mean_human, method="pearson")
 cor_0_bootstrap = compute_bootstrap(data_4)
 cor_0_ci = data.frame(
@@ -185,3 +193,136 @@ plot_1 = data_4 %>%
         axis.text.x=element_text(hjust=1.0, angle=45))
 plot_1
 ```
+
+*Work-in-progress*
+
+## Predicting goal inference as a function of goal and entrance distance
+
+Now we test whether an alternative model that uses simple distance heuristics performs better than our model. This alternative model consists of a multinomial logistic regression that attempts to predict which goal the agent was going for using (1) the distance between the observation and each goal, (2) the distance between the observation and the nearest entrance, and (3) the interactions between (1) and (2).
+
+```{r alternative_model_distance_heuristics}
+# Read in the distances between the observation and each goal and entrance.
+data_5 = read_csv("data/experiment_3/alternative/distances.csv")
+
+# Create three binary columns that indicate which goal (A, B, or C) was judged to be the most likely goal.
+data_6 = data_4 %>%
+  select(map, mean_human) %>%
+  left_join(data_5)
+
+# alternative_0 = glm(formula=mean_human~A_d1*B_d1*C_d1*doors_d1*num_doors,
+#                     data=temp_1)
+# # Full model #2
+# alternative_0 = glm(formula=mean_human~(A_d1*B_d1*C_d1*doors_d1 + *A_d2*B_d2*C_d2**doors_d2)*num_doors,
+#                     data=data_6)
+# summary(alternative_0)
+
+# Build a LASSO regression.
+set.seed(0)
+pred = c()
+for (m in 1:length(data_6$map)) {
+  # Set up an array of random lambda parameters.
+  lambda = 10^seq(10, -2, length=100)
+  
+  # No interactions.
+  # x = model.matrix(mean_human ~ ., data_7)[,-1]
+  
+  # Partial model.
+  # x = model.matrix(mean_human ~ (A_d1*B_d1*C_d1*doors_d1 + A_d2*B_d2*C_d2*doors_d2)*num_doors, select(data_6, -map))[,-1]
+  
+  # Full model.
+  x = model.matrix(
+    mean_human ~ A_d1*B_d1*C_d1*A_d2*B_d2*C_d2*doors_d1*doors_d2*num_doors,
+    data_6)[,-1]
+  y = data_6$mean_human
+  
+  training_trials = setdiff(1:nrow(data_6), m)
+  x_train = x[training_trials,]
+  y_train = y[training_trials]
+  x_test = x[m,]
+  y_test = y[m]
+  
+  lasso.mod <- glmnet(x_train, y_train, alpha=1, lambda=lambda)
+  cv.out <- cv.glmnet(x_train, y_train, alpha=1)
+  bestlam <- cv.out$lambda.min
+  # lasso.pred <- predict(lasso.mod, s=bestlam, newx=x[test,])
+  lasso.pred <- predict(lasso.mod, s=bestlam, newx=t(x_test))
+  # mse = c(mse, mean((as.numeric(lasso.pred)-y_test)^2))
+  # cors = c(cors, cor(lasso.pred, y_test))
+  pred = c(pred, as.numeric(lasso.pred))
+}
+cor(pred, data_6$mean_human)
+```
+
+```{r model_comparison}
+# Stitch the alternative model predictions to the mean participant judgments and our model predictions.
+data_7 = data_6 %>%
+  rename(human=num_agents) %>% 
+  mutate(alternative=fitted(alternative_0)) %>%
+  select(unique_id, map, human, alternative)
+
+data_7 = data_6 %>%
+  rename(human=mean_human) %>% 
+  mutate(alternative=fitted(alternative_0)) %>%
+  select(map, human, alternative)
+
+data_17 = data_6 %>%
+  # select(map, goal, mean_human, model) %>%
+  select(unique_id, map, num_agents) %>%
+  left_join(., gather(data.frame(map=data_16$map,
+                                 A=fitted(alternative_2)[,1],
+                                 B=fitted(alternative_2)[,2],
+                                 C=fitted(alternative_2)[,3]),
+                      goal, alternative, A, B, C))
+
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$alternative[indices], data$human[indices], method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CI.
+set.seed(seed)
+cor_3 = cor(data_7$alternative, data_7$human, method="pearson")
+cor_3_bootstrap = compute_bootstrap(data_7)
+cor_3_ci = data.frame(
+  lower=cor_3_bootstrap[4],
+  upper=cor_3_bootstrap[5]
+)
+
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor_diff = function(data, indices) {
+  cor_alternative = cor(data$alternative[indices], data$mean_human[indices], method="pearson")
+  cor_model = cor(data$model[indices], data$mean_human[indices], method="pearson")
+  return(cor_alternative-cor_model)
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor_diff,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the correlation difference and the bootstrapped 95% CI.
+set.seed(seed)
+cor_4 = cor_3 - cor_2
+cor_4_bootstrap = compute_bootstrap(data_17)
+cor_4_ci = data.frame(
+  lower=cor_4_bootstrap[4],
+  upper=cor_4_bootstrap[5]
+)
+```
+
+The Pearson correlation of the alternative model is _r_ = `r round(cor_3, 2)` (95% CI: `r round(cor_3_ci$lower, 2)`-`r round(cor_3_ci$upper, 2)`). The correlation difference between the alternative model and our model is $\Delta$_r_ = `r abs(round(cor_4, 2))` (95% CI: `r abs(round(cor_4_ci$upper, 2))`-`r abs(round(cor_4_ci$lower, 2))`).
