@@ -30,6 +30,7 @@ model_path = "data/experiment_3/model/predictions/Manhattan"
 ```{r libraries, echo=FALSE}
 # Import R libraries.
 library(boot)
+library(cowplot)
 library(jsonlite)
 library(tidyverse)
 ```
@@ -79,6 +80,12 @@ write_csv(data_3, file.path(human_path, "data.csv"))
 # Read in the preprocessed data.
 data_3 = read_csv(file.path(human_path, "data.csv"))
 
+# Compute the z-scored participant judgmnets.
+data_4 = data_3 %>%
+  group_by(unique_id) %>%
+  mutate(z_num_agents=scale(num_agents)[,1]) %>%
+  ungroup()
+
 # Define the bootstrap function for the bootstrap statistic.
 compute_mean = function(data, indices) {
   return(mean(data[indices]))
@@ -98,13 +105,16 @@ compute_bootstrap = function(data) {
 set.seed(seed)
 ci = data.frame()
 for (m in unique(data_3$map)) {
-    # Compute the bootstrap for each dependent measure.
-    num_agents_bootstrap = compute_bootstrap(filter(data_3, map==m)$num_agents)
+    # Compute the bootstrap for the dependent measure.
+    num_agents_bootstrap = compute_bootstrap(filter(data_4, map==m)$num_agents)
+    z_num_agents_bootstrap = compute_bootstrap(filter(data_4, map==m)$z_num_agents)
     
     # Store the bootstrapped 95% CIs.
     ci = rbind(ci, data.frame(map=m,
                               lower=num_agents_bootstrap[4],
-                              upper=num_agents_bootstrap[5]))
+                              upper=num_agents_bootstrap[5],
+                              z_lower=z_num_agents_bootstrap[4],
+                              z_upper=z_num_agents_bootstrap[5]))
 }
 
 # Read in the goal predictions.
@@ -114,27 +124,25 @@ model_0 = read_csv(file.path(model_path, "one_goal_per_path/data.csv"))
 model_1 = model_0 %>%
   select(-l_1, -l_2) %>%
   rename(model=p_2) %>%
-  mutate(z_model=scale(model))
+  mutate(z_model=scale(model)[,1])
 
-# Merge the z-scored participant judgments with the bootstrapped 95% CIs and the model predictions.
-data_4 = data_3 %>%
-  group_by(unique_id) %>%
-  rename(human=num_agents) %>%
-  mutate(z_human=scale(human)) %>%
-  ungroup() %>%
+# Merge the non-standardized and standardized participant judgments with the 
+# bootstrapped 95% CIs and the model predictions.
+data_5 = data_4 %>%
+  rename(human=num_agents, z_human=z_num_agents) %>%
   group_by(map) %>%
   summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
   left_join(ci) %>%
   left_join(model_1)
 
-# Plot the goal comparison.
-plot_0 = data_4 %>%
+# Generate a plot of the goal comparison using the non-standardized model 
+# predictions and mean participant judgments.
+plot_0 = data_5 %>%
   ggplot(aes(x=model, y=mean_human, label=map)) +
   geom_point(aes(color=substr(map, 0, 2))) +
   # geom_text(vjust=-1.0) +
   geom_smooth(method="lm", se=TRUE, linetype="dashed", color="black") +
-  # geom_abline() +
-  ggtitle("Model Agent Predictions vs. Participant Agent Judgments") +
+  ggtitle("Model Agent Predictions vs.\nParticipant Agent Judgments") +
   xlab("Model Predictions") +
   ylab("Human Judgments") +
   scale_color_discrete(name="Map") +
@@ -142,7 +150,26 @@ plot_0 = data_4 %>%
   theme(aspect.ratio=1.0,
         plot.title=element_text(hjust=0.5),
         legend.title=element_text(hjust=0.5))
-plot_0
+
+# Generate a plot of the goal comparison using the standardized model 
+# predictions and mean z-scored participant judgmnets.
+plot_1 = data_5 %>%
+  ggplot(aes(x=z_model, y=mean_z_human, label=map)) +
+  geom_point(aes(color=substr(map, 0, 2))) +
+  # geom_text(vjust=-1.0) +
+  geom_smooth(method="lm", se=TRUE, linetype="dashed", color="black") +
+  ggtitle("Model Agent Predictions vs.\nParticipant Agent Judgments") +
+  xlab("Standardized Model Predictions") +
+  ylab("Standardized Human Judgments") +
+  scale_color_discrete(name="Map") +
+  theme_classic() +
+  theme(aspect.ratio=1.0,
+        plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+
+# Combine the two plots.
+plot_2 = plot_grid(plot_0, plot_1, nrow=1)
+plot_2
 ```
 
 ```{r num_agents_correlation, echo=FALSE}
@@ -151,37 +178,54 @@ compute_cor = function(data, indices) {
   return(cor(data$model[indices], data$mean_human[indices], method="pearson"))
 }
 
+# Define the bootstrap function for the bootstrap statistic.
+compute_z_cor = function(data, indices) {
+  return(cor(data$z_model[indices], data$mean_z_human[indices], method="pearson"))
+}
+
 # Define the bootstrap function to simulate the data.
-compute_bootstrap = function(data) {
+compute_bootstrap = function(data, statistic) {
   # Run the simulations.
   simulations = boot(data=data,
-                     statistic=compute_cor,
+                     statistic=statistic,
                      R=10000)
-  
+
   return(boot.ci(simulations, type="bca")$bca)
 }
 
-# Compute the correlation between the model predictions and participant judgments.
+# Compute the correlation between the non-standardized model predictions and 
+# mean participant judgments.
 set.seed(seed)
-cor_0 = cor(data_4$model, data_4$mean_human, method="pearson")
-cor_0_bootstrap = compute_bootstrap(data_4)
+cor_0 = cor(data_5$model, data_5$mean_human, method="pearson")
+cor_0_bootstrap = compute_bootstrap(data_5, compute_cor)
 cor_0_ci = data.frame(
   lower=cor_0_bootstrap[4],
   upper=cor_0_bootstrap[5]
 )
+
+# Compute the correlation between the standardized model predictions and mean 
+# participant judgments.
+set.seed(seed)
+cor_1 = cor(data_5$z_model, data_5$mean_z_human, method="pearson")
+cor_1_bootstrap = compute_bootstrap(data_5, compute_z_cor)
+cor_1_ci = data.frame(
+  lower=cor_1_bootstrap[4],
+  upper=cor_1_bootstrap[5]
+)
 ```
 
-The Pearson correlation is _r_ = `r round(cor_0, 2)` (95% CI: `r round(cor_0_ci$lower, 2)`-`r round(cor_0_ci$upper, 2)`). Next, we generate comparisons for each trial.
+The Pearson correlation using the the non-standardized data is _r_ = `r round(cor_0, 2)` (95% CI: `r round(cor_0_ci$lower, 2)`-`r round(cor_0_ci$upper, 2)`). The Pearson correlation using the standardized data is _r_ = `r round(cor_1, 2)` (95% CI: `r round(cor_1_ci$lower, 2)`-`r round(cor_1_ci$upper, 2)`). Next, we generate comparisons for each trial for both groups of data.
 
 ```{r num_agents_inference_per_trial, fig.align="center"}
-# Plot agent inferences by trial.
-plot_1 = data_4 %>%
+# Generate a plot of agent inferences by trial using the non-standardized 
+# model predictions and mean participant judgments.
+plot_3 = data_5 %>%
   gather(type, value, mean_human, model) %>%
   mutate(lower=ifelse(type=="model", NA, lower),
          upper=ifelse(type=="model", NA, upper)) %>%
   ggplot(aes(x=type, y=value)) +
-  geom_point(aes(color=type)) +
-  geom_errorbar(aes(ymin=lower, ymax=upper), color="#F8766D", width=0.2) +
+  geom_bar(aes(fill=type), color="black", stat="identity") +
+  geom_errorbar(aes(ymin=lower, ymax=upper), width=0.2) +
   facet_wrap(~map) +
   scale_x_discrete(name="Type",
                    limits=c("mean_human", "model"),
@@ -191,7 +235,28 @@ plot_1 = data_4 %>%
   theme(aspect.ratio=1.0,
         legend.position="none",
         axis.text.x=element_text(hjust=1.0, angle=45))
-plot_1
+
+# Generate a plot of agent inferences by trial using the standardized model 
+# predictions and mean participant judgments.
+plot_4 = data_5 %>%
+  gather(type, value, mean_z_human, z_model) %>%
+  mutate(z_lower=ifelse(type=="z_model", NA, z_lower),
+         z_upper=ifelse(type=="z_model", NA, z_upper)) %>%
+  ggplot(aes(x=type, y=value)) +
+  geom_bar(aes(fill=type), color="black", stat="identity") +
+  geom_errorbar(aes(ymin=z_lower, ymax=z_upper), width=0.2) +
+  facet_wrap(~map) +
+  scale_x_discrete(name="Type",
+                   limits=c("mean_z_human", "z_model"),
+                   labels=c("Human", "Model")) +
+  ylab("Probability of Two Agents") +
+  theme_classic() +
+  theme(aspect.ratio=1.0,
+        legend.position="none",
+        axis.text.x=element_text(hjust=1.0, angle=45))
+
+plot_5 = plot_grid(plot_3, plot_4, nrow=1)
+plot_5
 ```
 
 *Work-in-progress*
@@ -204,36 +269,24 @@ Now we test whether an alternative model that uses simple distance heuristics pe
 # Read in the distances between the observation and each goal and entrance.
 data_5 = read_csv("data/experiment_3/alternative/distances.csv")
 
-# Create three binary columns that indicate which goal (A, B, or C) was judged to be the most likely goal.
+# Stitch the predictors to the mean participant data.
+# Stitch the predictors to the mean z-scored participant data.
 data_6 = data_4 %>%
-  select(map, mean_human) %>%
+  select(map, mean_human, mean_z_human) %>%
   left_join(data_5)
-
-# alternative_0 = glm(formula=mean_human~A_d1*B_d1*C_d1*doors_d1*num_doors,
-#                     data=temp_1)
-# # Full model #2
-# alternative_0 = glm(formula=mean_human~(A_d1*B_d1*C_d1*doors_d1 + *A_d2*B_d2*C_d2**doors_d2)*num_doors,
-#                     data=data_6)
-# summary(alternative_0)
 
 # Build a LASSO regression.
 set.seed(0)
-pred = c()
+predictions = c()
 for (m in 1:length(data_6$map)) {
   # Set up an array of random lambda parameters.
   lambda = 10^seq(10, -2, length=100)
-  
-  # No interactions.
-  # x = model.matrix(mean_human ~ ., data_7)[,-1]
-  
-  # Partial model.
-  # x = model.matrix(mean_human ~ (A_d1*B_d1*C_d1*doors_d1 + A_d2*B_d2*C_d2*doors_d2)*num_doors, select(data_6, -map))[,-1]
-  
+
   # Full model.
   x = model.matrix(
-    mean_human ~ A_d1*B_d1*C_d1*A_d2*B_d2*C_d2*doors_d1*doors_d2*num_doors,
+    mean_z_human ~ A_d1*B_d1*C_d1*A_d2*B_d2*C_d2*doors_d1*doors_d2*num_doors,
     data_6)[,-1]
-  y = data_6$mean_human
+  y = data_6$mean_z_human
   
   training_trials = setdiff(1:nrow(data_6), m)
   x_train = x[training_trials,]
@@ -241,38 +294,38 @@ for (m in 1:length(data_6$map)) {
   x_test = x[m,]
   y_test = y[m]
   
+  # Train the model and find the lambda parameter with the best fit.
   lasso.mod <- glmnet(x_train, y_train, alpha=1, lambda=lambda)
   cv.out <- cv.glmnet(x_train, y_train, alpha=1)
   bestlam <- cv.out$lambda.min
-  # lasso.pred <- predict(lasso.mod, s=bestlam, newx=x[test,])
-  lasso.pred <- predict(lasso.mod, s=bestlam, newx=t(x_test))
-  # mse = c(mse, mean((as.numeric(lasso.pred)-y_test)^2))
-  # cors = c(cors, cor(lasso.pred, y_test))
-  pred = c(pred, as.numeric(lasso.pred))
+  
+  # Generate and store the prediction using the test data.
+  lasso.pred = predict(lasso.mod, s=bestlam, newx=t(x_test))
+  predictions = c(predictions, as.numeric(lasso.pred))
 }
-cor(pred, data_6$mean_human)
+cor(predictions, data_6$mean_z_human)
+
+alternative = data.frame(
+  map = data_6$map,
+  predictions = predictions
+)
 ```
 
 ```{r model_comparison}
 # Stitch the alternative model predictions to the mean participant judgments and our model predictions.
-data_7 = data_6 %>%
-  rename(human=num_agents) %>% 
-  mutate(alternative=fitted(alternative_0)) %>%
-  select(unique_id, map, human, alternative)
+data_7 = data_4 %>%
+  select(map, mean_z_human, z_model) %>%
+  left_join(alternative) %>%
+  rename(human=mean_z_human, model=z_model, alternative=predictions)
 
-data_7 = data_6 %>%
-  rename(human=mean_human) %>% 
-  mutate(alternative=fitted(alternative_0)) %>%
-  select(map, human, alternative)
-
-data_17 = data_6 %>%
-  # select(map, goal, mean_human, model) %>%
-  select(unique_id, map, num_agents) %>%
-  left_join(., gather(data.frame(map=data_16$map,
-                                 A=fitted(alternative_2)[,1],
-                                 B=fitted(alternative_2)[,2],
-                                 C=fitted(alternative_2)[,3]),
-                      goal, alternative, A, B, C))
+# data_17 = data_6 %>%
+#   # select(map, goal, mean_human, model) %>%
+#   select(unique_id, map, num_agents) %>%
+#   left_join(., gather(data.frame(map=data_16$map,
+#                                  A=fitted(alternative_2)[,1],
+#                                  B=fitted(alternative_2)[,2],
+#                                  C=fitted(alternative_2)[,3]),
+#                       goal, alternative, A, B, C))
 
 # Define the bootstrap function for the bootstrap statistic.
 compute_cor = function(data, indices) {

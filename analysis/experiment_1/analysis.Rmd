@@ -571,7 +571,7 @@ for (m in data_14$map) {
 }
 
 # Set the baseline variable.
-data_16$max_goal = factor(data_16$max_goal)  
+data_16$max_goal = factor(data_16$max_goal)
 data_16$max_goal = relevel(data_16$max_goal, ref=1)
 
 # Compute the multinomial logistic regression.
