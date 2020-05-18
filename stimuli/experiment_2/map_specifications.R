@@ -400,3 +400,52 @@ walls = list(
     geom_rect(aes(xmin=4.5, xmax=5.5, ymin=8.5, ymax=9.5, fill="gray"), alpha=1)
   )
 )
+
+observations = list(
+  # DX_DX_0
+  c(5, 7),
+  # DX_NX_0
+  c(5, 6),
+  # DX_PX_0
+  c(7, 5),
+  # DX_UN_0
+  c(6, 6),
+  # ND_DX_0
+  c(5, 5),
+  # ND_DX_1
+  c(7, 3),
+  # ND_NX_0
+  c(5, 6),
+  # ND_NX_1
+  c(8, 4),
+  # ND_PX_0
+  c(6, 4),
+  # ND_PX_1
+  c(5, 3),
+  # ND_UN_0
+  c(7, 8),
+  # NX_DX_0
+  c(6, 7),
+  # NX_NX_0
+  c(6, 6),
+  # NX_PX_0
+  c(4, 6),
+  # NX_UN_0
+  c(8, 5),
+  # PX_DX_0
+  c(3, 7),
+  # PX_NX_0
+  c(8, 5),
+  # PX_PX_0
+  c(5, 5),
+  # PX_UN_0
+  c(8, 7),
+  # UN_DX_0
+  c(6, 7),
+  # UN_NX_0
+  c(8, 8),
+  # UN_PX_0
+  c(4, 6),
+  # UN_UN_0
+  c(6, 6)
+)

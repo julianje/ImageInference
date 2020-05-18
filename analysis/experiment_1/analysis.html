@@ -1723,15 +1723,16 @@ $(document).ready(function () {
 <div id="preprocessing" class="section level1">
 <h1>Preprocessing</h1>
 <pre class="r"><code># Read in the participant data (after manually removing errors).
-data_0 &lt;- read_csv(file.path(data_path, &quot;raw_data.csv&quot;), quote=&quot;~&quot;)
+data_0 &lt;- read_csv(file.path(human_path, &quot;raw_data.csv&quot;), quote=&quot;~&quot;)
 
 # Read in the MTurk results file.
-mturk_results = read_csv(file.path(data_path, &quot;mturk_results.csv&quot;), col_names=TRUE) %&gt;%
-  mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode)))
+mturk_results = read_csv(file.path(human_path, &quot;mturk_results.csv&quot;), col_names=TRUE) %&gt;%
+  mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode))) %&gt;%
+  filter(AssignmentStatus==&quot;Approved&quot;)
 
-# Filter out any duplicate database entries based on the MTurk results file.
-duplicates &lt;- setdiff(data_0$unique_id, mturk_results$Answer.surveycode)
-if (length(duplicates) != 0) { stop(&quot;There are duplicate entries.&quot;) }
+# Check for invalid survey codes.
+invalid = sum(!(mturk_results$Answer.surveycode %in% data_0$unique_id))
+if (invalid != 0) { stop(&quot;There's an invalid survey code.&quot;) }
 
 # Convert the JSON string into JSON.
 data_1 = lapply(data_0$results, fromJSON)
@@ -1751,13 +1752,13 @@ for (p in 1:length(data_1)) {
 }
 
 # Write the preprocessed data.
-write_csv(data_3, file.path(data_path, &quot;data.csv&quot;))</code></pre>
+write_csv(data_3, file.path(human_path, &quot;data.csv&quot;))</code></pre>
 </div>
 <div id="goal-inference" class="section level1">
 <h1>Goal Inference</h1>
 <p>First, we generate a scatter plot comparing our model predictions with participant judgments on the goal inferences.</p>
 <pre class="r"><code># Read in the preprocessed data.
-data_3 = read_csv(file.path(data_path, &quot;data.csv&quot;))
+data_3 = read_csv(file.path(human_path, &quot;data.csv&quot;))
 
 # Select and normalize the goal judgments.
 data_4 = data_3 %&gt;%
