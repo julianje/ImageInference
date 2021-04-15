@@ -1,4 +1,4 @@
-map,A_d1,B_d1,C_d1,A_d2,B_d2,C_d2,doors_d1,doors_d2,num_doors
+map,A_d1,B_d1,C_d1,A_d2,B_d2,C_d2,entrance_d1,entrance_d2,num_entrances
 D1_0,5,5,7,7,3,9,5,3,1
 D1_1,5,3,9,5,7,5,2,6,1
 D1_2,6,8,4,8,6,6,5,5,2

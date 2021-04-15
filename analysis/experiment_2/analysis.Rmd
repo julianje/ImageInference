@@ -1,5 +1,5 @@
 ---
-title: "Image Inference - Experiment 2"
+title: "Image Inference (Experiment 2)"
 output:
   pdf_document: default
   html_document:
@@ -23,12 +23,13 @@ data = "data_1"
 # Set up the path to the participant data.
 human_path = file.path("data/experiment_2/human", data)
 
-# Set up the path to the human data.
+# Set up the path to the model data.
 model_path = file.path("data/experiment_2/model", data)
 ```
 
 ```{r libraries, echo=FALSE}
 # Import R libraries.
+library(boot)
 library(cowplot)
 library(ggimage)
 library(jsonlite)
@@ -39,12 +40,14 @@ library(tidyverse)
 # Preprocessing
 
 ```{r preprocessing}
-# Read in the participant data (after manually removing errors).
+# Read in the participant data.
 data_0 = read_csv(file.path(human_path, "data.csv"), quote="~")
 
 # Read in the MTurk results file.
-mturk_results = read_csv(file.path(human_path, "mturk_results.csv"), col_names=TRUE) %>%
-  mutate(Answer.surveycode=substr(Answer.surveycode, 6, length(Answer.surveycode))) %>%
+mturk_results = read_csv(file.path(human_path, "mturk_results.csv"),
+                         col_names=TRUE) %>%
+  mutate(Answer.surveycode=substr(Answer.surveycode, 6,
+                                  length(Answer.surveycode))) %>%
   filter(AssignmentStatus=="Approved")
 
 # Check for invalid survey codes.
@@ -85,9 +88,9 @@ for (p in 1:length(mturk_results$Answer.surveycode)) {
 
 # Model Comparison
 
-Here we pass in participant-generated paths ($M=$ `r round(mean(age), 2)` years, $SD=$ `r round(sd(age), 2)` years) to our model and an alternative model and compute the posterior probability of each model generating each participant-generated path. We then divide the posterior probability from our model by that of the alternative model to compute the Bayes factor. A Bayes factor greater than one indicates our model explains participant judgments better; a Bayes factor less than one indicates the alternative model explains participant judgments better.
+Here we pass in participant-generated paths ($N$=`r length(age)`; $M$=`r round(mean(age), 2)` years, $SD$=`r round(sd(age), 2)` years) to our model and a baseline model and compute the posterior probability of each model generating each participant-generated path. We then divide the posterior probability from our model by that of the baseline model to compute the Bayes factor. A Bayes factor greater than one indicates our model explains participant judgments better; a Bayes factor less than one indicates the baseline model explains participant judgments better.
 
-With a Bayes factor for each path for every participant, we then average them so that each participant has a single mean Bayes factor. First, we run a t-test comparing these mean Bayes factors against 0 to validate (from an NHST perspective) whether or not our model outperforms the alternative model.
+With a Bayes factor for each path for every participant, we then average them so that each participant has a single mean Bayes factor. First, we run a t-test comparing these mean Bayes factors against one to validate (from an NHST perspective) whether or not our model outperforms the baseline model.
 
 ```{r nhst, echo=FALSE}
 # Read in the model evaluations of the participant-generated paths.
@@ -102,15 +105,17 @@ data_5 = data_4 %>%
 t.test(x=data_5$mean_bayes_factor, mu=1.0, alternative="greater")
 ```
 
-Next, we take a look at the distribution of mean Bayes factors among our `r length(age)` participants, both using a standard scale and in log scale.
+Next, we take a look at the distribution of mean Bayes factors among our `r length(age)` participants, both in standard scale and in log scale.
 
-```{r distributions, fig.align="center"}
+```{r distributions, fig.align="center", fig.height=5}
 plot_0 = data_5 %>%
   ggplot(aes(x=mean_bayes_factor)) +
-  geom_histogram() +
+  geom_histogram(aes(y=stat(density)), fill="grey", color="black") +
+  geom_density(color="red", linetype="dashed") +
   theme_classic() +
   theme(aspect.ratio=1.0,
         axis.text=element_text(size=12),
+        axis.text.y=element_text(angle=90, hjust=0.5),
         axis.title=element_text(size=12)) +
   xlab("Average Bayes Factor") +
   ylab("Count")
@@ -118,10 +123,12 @@ plot_0 = data_5 %>%
 plot_1 = data_5 %>%
   mutate(log_mean_bayes_factor=log10(mean_bayes_factor)) %>%
   ggplot(aes(x=log_mean_bayes_factor)) +
-  geom_histogram() +
+  geom_histogram(aes(y=stat(density)), fill="grey", color="black") +
+  geom_density(color="red", linetype="dashed") +
   theme_classic() +
   theme(aspect.ratio=1.0,
         axis.text=element_text(size=12),
+        axis.text.y=element_text(angle=90, hjust=0.5),
         axis.title=element_text(size=12)) +
   xlab("log10(Average Bayes Factor)") +
   ylab("Count")
@@ -130,61 +137,698 @@ plot_2 = plot_grid(plot_0, plot_1, nrow=1)
 plot_2
 ```
 
-# Visualizations
+# Comparing participant-generated paths with participant inferences from Experiment 1
 
-Here we plot the visualizations of the participant-generated data on each trial.
+Here we test whether the goals and entrances from participant-generated paths have predictive power over inferences participants made in Experiment 1. 
 
-```{r visualizations, fig.align="center", fig.height=26, fig.width=12}
+## Preprocessing
+
+First, we set up the paths to the data from Experiment 1.
+
+```{r import_experiment_1_data}
+# Set up the path to the participant data.
+experiment_1_human_path = "data/experiment_1/human/data_0"
+
+# Set up the path to the model data.
+experiment_1_model_path = "data/experiment_1/model/predictions/Manhattan"
+```
+
+Next, we preprocess the goal inference data from Experiment 1.
+
+```{r experiment_1_goal_inference}
+# Read in the preprocessed data.
+data_6 = read_csv(file.path(experiment_1_human_path, "data.csv"))
+
+# Select and normalize the goal judgments.
+data_7 = data_6 %>%
+  select(unique_id, map, A, B, C) %>%
+  gather(goal, human, A, B, C) %>%
+  left_join(do(., summarize(group_by(., unique_id, map),
+                            total_human=sum(human)))) %>%
+  mutate(human=human/total_human) %>%
+  select(-total_human)
+
+# Define the bootstrap function for the bootstrap statistic.
+compute_mean = function(data, indices) {
+  return(mean(data[indices]))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_mean,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CIs.
+set.seed(seed)
+ci = data.frame()
+for (m in unique(data_7$map)) {
+  # Filter the current map.
+  data_8 = data_7 %>%
+    filter(map==m)
+  
+  # Compute the bootstrap for each dependent measure.
+  bootstrap_A = compute_bootstrap(filter(data_8, goal=="A")$human)
+  bootstrap_B = compute_bootstrap(filter(data_8, goal=="B")$human)
+  bootstrap_C = compute_bootstrap(filter(data_8, goal=="C")$human)
+  
+  # Store the bootstrapped 95% CIs for this pair.
+  ci = rbind(ci, data.frame(map=rep(m, 3),
+                            goal=c("A", "B", "C"),
+                            lower=c(bootstrap_A[4],
+                                    bootstrap_B[4],
+                                    bootstrap_C[4]),
+                            upper=c(bootstrap_A[5],
+                                    bootstrap_B[5],
+                                    bootstrap_C[5])))
+}
+
+# Read in the goal predictions.
+model_0 = read_csv(file.path(experiment_1_model_path, "goal_predictions.csv"))
+
+# Perform some basic preprocessing.
+model_1 = model_0 %>%
+  rename(model=probability)
+
+# Merge the participant judgments with the bootstrapped 95% CIs and the model 
+# predictions.
+data_9 = data_7 %>%
+  group_by(unique_id) %>%
+  ungroup() %>%
+  group_by(map, goal) %>%
+  summarize(mean_human=mean(human)) %>%
+  ungroup() %>%
+  left_join(ci) %>%
+  left_join(model_1)
+```
+
+Then, we preprocess the entrance inference data from Experiment 1.
+
+```{r experiment_1_entrance_inference}
+# Select and normalize the entrance judgments.
+data_10 = data_6 %>%
+  filter(!grepl("ND", map)) %>%
+  select(unique_id, map, `1`, `2`, `3`) %>%
+  gather(entrance, human, `1`, `2`, `3`) %>%
+  filter(human!=-1) %>%
+  left_join(do(., summarize(group_by(., unique_id, map),
+                            total_human=sum(human)))) %>%
+  mutate(human=human/total_human) %>%
+  select(-total_human)
+
+# Define the bootstrap function for the bootstrap statistic.
+compute_mean = function(data, indices) {
+  return(mean(data[indices]))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_mean,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CIs.
+set.seed(seed)
+ci = data.frame()
+for (m in unique(data_10$map)) {
+  # Filter the current map.
+  data_11 = data_10 %>%
+    filter(map==m)
+  
+  # Compute the bootstrap for each dependent measure.
+  bootstrap_1 = compute_bootstrap(filter(data_11, entrance=="1")$human)
+  bootstrap_2 = compute_bootstrap(filter(data_11, entrance=="2")$human)
+  if (length(unique(data_11$entrance)) == 3) {
+    bootstrap_3 = compute_bootstrap(filter(data_11, entrance=="3")$human)
+  }
+  
+  # Store the bootstrapped 95% CIs for this pair.
+  if (length(unique(data_11$entrance)) == 3) {
+    ci = rbind(ci, data.frame(map=rep(m, 3),
+                              entrance=c("1", "2", "3"),
+                              lower=c(bootstrap_1[4],
+                                      bootstrap_2[4],
+                                      bootstrap_3[4]),
+                              upper=c(bootstrap_1[5],
+                                      bootstrap_2[5],
+                                      bootstrap_3[5])))
+  }
+  else {
+    ci = rbind(ci, data.frame(map=rep(m, 2),
+                              entrance=c("1", "2"),
+                              lower=c(bootstrap_1[4],
+                                      bootstrap_2[4]),
+                              upper=c(bootstrap_1[5],
+                                      bootstrap_2[5])))
+  }
+}
+
+# Read in the entrance predictions.
+model_2 = read_csv(file.path(experiment_1_model_path,
+                             "entrance_predictions.csv"))
+
+# Stitch the entrance mapping to the predictions and do some preprocessing.
+model_3 = model_2 %>%
+  right_join(read_csv(file.path(experiment_1_model_path,
+                                "entrance_mapping.csv"))) %>%
+  mutate(probability=ifelse(is.na(probability), 0, probability)) %>%
+  select(-entrance) %>%
+  rename(entrance=number, model=probability) %>%
+  mutate(entrance=as.character(entrance))
+
+# Merge the participant judgments with the bootstrapped 95% CIs and the model 
+# predictions.
+data_12 = data_10 %>%
+  group_by(unique_id) %>%
+  ungroup() %>%
+  group_by(map, entrance) %>%
+  summarize(mean_human=mean(human)) %>%
+  ungroup() %>%
+  left_join(ci) %>%
+  left_join(model_3)
+```
+
+Lastly, we preprocess the participant-generated path data from Experiment 2.
+
+```{r experiment_2_path_reconstructions}
 # Import the participant data.
-data_6 = tibble()
-for (i in 1:40) {
+data_14 = tibble()
+for (i in 1:nrow(data_5)) {
   # Stitch together the path to this participant's data.
-  data_path = paste("data/experiment_2/human/data_1/", i-1, ".csv", sep="")
+  data_path = paste(human_path, "/", i-1, ".csv", sep="")
   
   # Import this participant's data.
-  data_6 = data_6 %>%
+  data_14 = data_14 %>%
     rbind(read_csv(data_path, col_types="dcc"))
 }
 
 # Rearrange the data such that the maps are ordered alphabetically within each
 # participant.
-data_7 = data_6 %>%
+data_15 = data_14 %>%
   arrange(participant, map)
 
+# Construct a mapping with the door locations.
+doors = list(
+  # DX_DX_0
+  list(c(5, 1), c(1, 5)),
+  # DX_NX_0
+  list(c(5, 1), c(5, 9)),
+  # DX_PX_0
+  list(c(4, 1), c(9, 7)),
+  # DX_UN_0
+  list(c(5, 9), c(1, 3)),
+  # ND_DX_0
+  list(c(9, 5)),
+  # ND_DX_1
+  list(c(9, 3)),
+  # ND_NX_0
+  list(c(9, 5)),
+  # ND_NX_1
+  list(c(9, 3)),
+  # ND_PX_0
+  list(c(9, 3)),
+  # ND_PX_1
+  list(c(9, 4)),
+  # ND_UN_0
+  list(c(9, 7)),
+  # NX_DX_0
+  list(c(9, 5), c(7, 9), c(1, 5)),
+  # NX_NX_0
+  list(c(3, 1), c(9, 4), c(6, 9)),
+  # NX_PX_0
+  list(c(9, 6), c(6, 9), c(1, 3)),
+  # NX_UN_0
+  list(c(9, 5), c(7, 9), c(1, 5)),
+  # PX_DX_0
+  list(c(5, 1), c(7, 9), c(1, 4)),
+  # PX_NX_0
+  list(c(9, 5), c(7, 9), c(1, 6)),
+  # PX_PX_0
+  list(c(6, 1), c(6, 9), c(1, 3)),
+  # PX_UN_0
+  list(c(9, 4), c(9, 8), c(1, 5)),
+  # UN_DX_0
+  list(c(5, 1), c(1, 5)),
+  # UN_NX_0
+  list(c(7, 1), c(1, 7)),
+  # UN_PX_0
+  list(c(9, 6), c(6, 9)),
+  # UN_UN_0
+  list(c(9, 5), c(5, 9))
+)
+
 # Restructure the participant data.
-data_10 = tibble()
-for (p in 1:length(unique(data_7$participant))) {
-  for (m in 1:length(unique(data_7$map))) {
+data_18 = tibble()
+for (p in 1:length(unique(data_15$participant))) {
+  for (m in 1:length(unique(data_15$map))) {
     # Select a participant and map.
-    data_8 = data_7 %>%
-      filter(participant==unique(data_7$participant)[p],
-             map==unique(data_7$map)[m])
+    data_16 = data_15 %>%
+      filter(participant==unique(data_15$participant)[p],
+             map==unique(data_15$map)[m])
     
     # Extract the x- and y-coordinates from their corresponding indices.
-    indices_x = seq(1, nchar(data_8$coords), 4)
-    indices_y = seq(3, nchar(data_8$coords), 4)
+    indices_x = seq(1, nchar(data_16$coords), 4)
+    indices_y = seq(3, nchar(data_16$coords), 4)
     x = c()
     y = c()
     for (i in 1:length(indices_x)) {
-      x = c(x, as.integer(substr(data_8$coords, indices_x[i], indices_x[i])))
-      y = c(y, as.integer(substr(data_8$coords, indices_y[i], indices_y[i])))
+      x = c(x, as.integer(substr(data_16$coords, indices_x[i], indices_x[i])))
+      y = c(y, as.integer(substr(data_16$coords, indices_y[i], indices_y[i])))
     }
     
+    # Find out which door corresponds to the start of this path.
+    diff = c()
+    for (door in doors[[m]]) {
+      diff = c(diff, abs(x[1]-door[1])+abs(y[1]-door[2]))
+    }
+    x = c(doors[[m]][[which(diff==min(diff))]][1], x)
+    y = c(doors[[m]][[which(diff==min(diff))]][2], y)
+    
     # Set up the new structure of the participant data.
-    data_9 = data.frame(
-      participant = unique(data_7$participant)[p],
-      map = unique(data_7$map)[m],
-      x = x,
-      y = y,
-      time = 1:length(x)
+    data_17 = data.frame(
+      participant=unique(data_15$participant)[p],
+      map=unique(data_15$map)[m],
+      x=x,
+      y=y,
+      time=(1:length(x))-1
     )
     
     # Stack this participant's data with the rest.
-    data_10 = data_10 %>%
-      rbind(data_9)
+    data_18 = data_18 %>%
+      rbind(data_17)
   }
 }
 
+# Extract the goals and entrances from the participant-generated paths.
+data_20 = tibble()
+for (p in 1:length(unique(data_18$participant))) {
+  for (m in 1:length(unique(data_18$map))) {
+    # Filter the goal coordinates for each participant-generated path and 
+    # assign the corresponding goal label given its coordinates.
+    goals = data_18 %>%
+      filter(participant==unique(data_18$participant)[p],
+             map==unique(data_18$map)[m]) %>%
+      filter(time==max(time)) %>%
+      mutate(goal=ifelse(x==2 & y==2, "A",
+                         ifelse(x==8 & y==2, "B", "C")))
+    
+    # Filter the entrance coordinates for each participant-generated path.
+    entrances = data_18 %>%
+      filter(participant==unique(data_18$participant)[p],
+             map==unique(data_18$map)[m]) %>%
+      filter(time==0)
+    
+    # Assign the corresponding entrance label given its coordinates.
+    for (d in 1:length(doors[[m]])) {
+      if (doors[[m]][[d]][1]==entrances$x & doors[[m]][[d]][2]==entrances$y) {
+        entrances = entrances %>%
+          mutate(entrance=as.character(d))
+      }
+    }
+        
+    # Merge the data back together.
+    data_19 = goals %>%
+      select(participant, map, goal) %>%
+      left_join(select(entrances, participant, map, entrance))
+    
+    # Stack the data for this particular participant-generated path.
+    data_20 = data_20 %>%
+      rbind(data_19)
+  } 
+}
+```
+
+## Goal Inference
+
+First, we test whether the goals extracted from the participant-generated paths in Experiment 2 predict the goal inferences participants made in Experiment 1.
+
+```{r experiment_2_vs_experiment_1_goal_comparison, fig.align="center"}
+# Filter the goal inferences from Experiment 2 and compute the endorsement for 
+# each goal on each trial.
+data_21 = data_20 %>%
+  select(-entrance) %>%
+  group_by(map, goal) %>%
+  summarize(experiment_2=n()/length(unique(data_20$participant)))
+
+# Merge the goal inferences from Experiment 2 and Experiment 1.
+data_22 = data_9 %>%
+  select(map, goal, mean_human) %>%
+  rename(experiment_1=mean_human) %>%
+  left_join(data_21) %>%
+  mutate(experiment_2=ifelse(is.na(experiment_2), 0, experiment_2))
+
+# Plot the goal inference comparison.
+plot_3 = data_22 %>%
+  ggplot(aes(x=experiment_2, y=experiment_1, label=map)) +
+  geom_point(aes(color=substr(map, 0, 2))) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle("Experiment 2 Goal Judgments vs.\nExperiment 1 Goal Judgments") +
+  xlab("Experiment 2 Goal Judgments") +
+  ylab("Experiment 1 Goal Judgments") +
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Goal Type:") + 
+  theme_classic() +
+  theme(aspect.ratio=1.0,
+        plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_3
+```
+
+```{r experiment_2_vs_experiment_1_goal_correlation, echo=FALSE}
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$experiment_2[indices], data$experiment_1[indices],
+             method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the correlation and its bootstrapped 95% CI.
+set.seed(seed)
+cor_0 = cor(data_22$experiment_2, data_22$experiment_1, method="pearson")
+cor_0_bootstrap = compute_bootstrap(data_22)
+cor_0_ci = data.frame(
+  lower=cor_0_bootstrap[4],
+  upper=cor_0_bootstrap[5]
+)
+```
+
+The Pearson correlation is $r$=`r round(cor_0, 2)` (95% CI: `r round(cor_0_ci$lower, 2)`-`r round(cor_0_ci$upper, 2)`). By the law of transivity, the goals extracted from these participant-generated paths in Experiment 2 should also correlate with our model's predictions in Experiment 1.
+
+```{r model_predictions_vs_experiment_2_goal_comparison, fig.align="center"}
+# Merge the model predictions from Experiment 1 with the participant goal 
+# inferences from Experiment 2.
+data_23 = data_9 %>%
+  select(map, goal, model) %>%
+  left_join(data_21) %>%
+  mutate(experiment_2=ifelse(is.na(experiment_2), 0, experiment_2))
+
+# Plot the goal inference comparison.
+plot_4 = data_23 %>%
+  ggplot(aes(x=model, y=experiment_2, label=map)) +
+  geom_point(aes(color=substr(map, 0, 2))) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle("Experiment 1 Model Predictions vs.\nExperiment 2 Goal Judgments") +
+  xlab("Experiment 1 Model Predictions") +
+  ylab("Experiment 2 Goal Judgments") +
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Goal Type:") + 
+  theme_classic() +
+  theme(aspect.ratio=1.0,
+        plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_4
+```
+
+```{r model_predictions_vs_experiment_2_goal_correlation, echo=FALSE}
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$model[indices], data$experiment_2[indices],
+             method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the correlation and its bootstrapped 95% CI.
+set.seed(seed)
+cor_1 = cor(data_23$model, data_23$experiment_2, method="pearson")
+cor_1_bootstrap = compute_bootstrap(data_23)
+cor_1_ci = data.frame(
+  lower=cor_1_bootstrap[4],
+  upper=cor_1_bootstrap[5]
+)
+```
+
+The Pearson correlation is $r$=`r round(cor_1, 2)` (95% CI: `r round(cor_1_ci$lower, 2)`-`r round(cor_1_ci$upper, 2)`).
+
+## Entrance Inference
+
+Next, we test whether the entrances extracted from the participant-generated paths in Experiment 2 predict the entrance inferences participants made in Experiment 1.
+
+```{r experiment_2_vs_experiment_1_entrance_comparison, fig.align="center"}
+# Filter the entrance inferences from Experiment 2 and compute the endorsement 
+# for each entrance on each trial.
+data_24 = data_20 %>%
+  select(-goal) %>%
+  group_by(map, entrance) %>%
+  summarize(experiment_2=n()/length(unique(data_20$participant)))
+
+# Merge the entrance inferences from Experiment 2 and Experiment 1.
+data_25 = data_12 %>%
+  select(map, entrance, mean_human) %>%
+  rename(experiment_1=mean_human) %>%
+  left_join(data_24) %>%
+  mutate(experiment_2=ifelse(is.na(experiment_2), 0, experiment_2))
+
+# Plot the entrance inference comparison.
+plot_5 = data_25 %>%
+  ggplot(aes(x=experiment_2, y=experiment_1, label=map)) +
+  geom_point(aes(color=substr(map, 0, 2))) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle(paste("Experiment 2 Entrance Judgments vs.\nExperiment 1 Entrance",
+                "Judgments")) +
+  xlab("Experiment 2 Entrance Judgments") +
+  ylab("Experiment 1 Entrance Judgments") +
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Entrance Type:") + 
+  theme_classic() +
+  theme(aspect.ratio=1.0,
+        plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_5
+```
+```{r experiment_2_vs_experiment_1_entrance_correlation, echo=FALSE}
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$experiment_2[indices], data$experiment_1[indices],
+             method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the correlation and its bootstrapped 95% CI.
+set.seed(seed)
+cor_2 = cor(data_25$experiment_2, data_25$experiment_1, method="pearson")
+cor_2_bootstrap = compute_bootstrap(data_25)
+cor_2_ci = data.frame(
+  lower=cor_2_bootstrap[4],
+  upper=cor_2_bootstrap[5]
+)
+```
+
+The Pearson correlation is $r$=`r round(cor_2, 2)` (95% CI: `r round(cor_2_ci$lower, 2)`-`r round(cor_2_ci$upper, 2)`). By the law of transivity, the entrances extracted from these participant-generated paths in Experiment 2 should also correlate with our model's predictions in Experiment 1.
+
+```{r model_predictions_vs_experiment_2_entrance_comparison, fig.align="center"}
+# Merge the model predictions from Experiment 1 with the participant entrance 
+# inferences from Experiment 2.
+data_26 = data_12 %>%
+  select(map, entrance, model) %>%
+  left_join(data_24) %>%
+  mutate(experiment_2=ifelse(is.na(experiment_2), 0, experiment_2))
+
+# Plot the entrance inference comparison.
+plot_6 = data_26 %>%
+  ggplot(aes(x=model, y=experiment_2, label=map)) +
+  geom_point(aes(color=substr(map, 0, 2))) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle(paste("Experiment 1 Model Predictions vs.\nExperiment 2 Entrance",
+                "Judgments")) +
+  xlab("Experiment 1 Model Predictions") +
+  ylab("Experiment 2 Entrance Judgments") +
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Entrance Type:") + 
+  theme_classic() +
+  theme(aspect.ratio=1.0,
+        plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_6
+```
+
+```{r model_predictions_vs_experiment_2_entrance_correlation, echo=FALSE}
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$model[indices], data$experiment_2[indices],
+             method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the correlation and its bootstrapped 95% CI.
+set.seed(seed)
+cor_3 = cor(data_26$model, data_26$experiment_2, method="pearson")
+cor_3_bootstrap = compute_bootstrap(data_26)
+cor_3_ci = data.frame(
+  lower=cor_3_bootstrap[4],
+  upper=cor_3_bootstrap[5]
+)
+```
+
+The Pearson correlation is $r$=`r round(cor_3, 2)` (95% CI: `r round(cor_3_ci$lower, 2)`-`r round(cor_3_ci$upper, 2)`).
+
+## Combined Inference
+
+Finally, we jointly analyze the goals and doors extracted from participant-generated paths in Experiment 2 with the goal and entrance inferences participants made in Experiment 1.
+
+```{r experiment_2_vs_experiment_1_combined_comparison, fig.align="center"}
+# Merge the goal and entrance inferences from Experiment 2 and Experiment 1.
+data_27 = data_22 %>%
+  mutate(inference=goal, type="goal") %>%
+  select(-goal) %>%
+  rbind(select(mutate(data_25, inference=entrance, type="entrance"),
+               -entrance))
+
+# Plot the combined inference comparison.
+plot_7 = data_27 %>%
+  ggplot(aes(x=experiment_2, y=experiment_1, label=map)) +
+  geom_point(aes(color=type)) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle(paste("Experiment 2 Combined Judgments vs.\nExperiment 1 Combined",
+                "Judgments")) +
+  xlab("Experiment 2 Combined Judgments") +
+  ylab("Experiment 1 Combined Judgments") +
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Inference Type:",
+                       limits=c("entrance", "goal"),
+                       labels=c("Entrance", "Goal")) + 
+  theme_classic() +
+  theme(aspect.ratio=1.0,
+        plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_7
+```
+
+```{r experiment_2_vs_experiment_1_combined_correlation, echo=FALSE}
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$experiment_2[indices], data$experiment_1[indices],
+             method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the correlation and its bootstrapped 95% CI.
+set.seed(seed)
+cor_4 = cor(data_27$experiment_2, data_27$experiment_1, method="pearson")
+cor_4_bootstrap = compute_bootstrap(data_27)
+cor_4_ci = data.frame(
+  lower=cor_4_bootstrap[4],
+  upper=cor_4_bootstrap[5]
+)
+```
+
+The Pearson correlation is $r$=`r round(cor_4, 2)` (95% CI: `r round(cor_4_ci$lower, 2)`-`r round(cor_4_ci$upper, 2)`). Finally, we generate the scatter plot comparing the goals and doors extracted from the participant-generated paths in Experiment 2 against our model's predictions in Experiment 1.
+
+```{r model_predictions_vs_experiment_2_combined_comparison, fig.align="center"}
+# Merge the goal and entrance inferences from Experiment 2 with the model 
+# predictions from Experiment 1.
+data_28 = data_23 %>%
+  mutate(inference=goal, type="goal") %>%
+  select(-goal) %>%
+  rbind(select(mutate(data_26, inference=entrance, type="entrance"),
+               -entrance))
+
+# Plot the combined inference comparison.
+plot_8 = data_28 %>%
+  ggplot(aes(x=model, y=experiment_2, label=map)) +
+  geom_point(aes(color=type)) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle(paste("Experiment 1 Model Predictions vs.\nExperiment 2",
+                "Combined Judgments")) +
+  xlab("Experiment 1 Model Predictions") +
+  ylab("Experiment 2 Combined Judgments") +
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Inference Type:",
+                       limits=c("entrance", "goal"),
+                       labels=c("Entrance", "Goal")) + 
+  theme_classic() +
+  theme(aspect.ratio=1.0,
+        plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_8
+```
+
+```{r model_predictions_vs_experiment_2_combined_correlation, echo=FALSE}
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$model[indices], data$experiment_2[indices],
+             method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the correlation and its bootstrapped 95% CI.
+set.seed(seed)
+cor_5 = cor(data_28$model, data_28$experiment_2, method="pearson")
+cor_5_bootstrap = compute_bootstrap(data_28)
+cor_5_ci = data.frame(
+  lower=cor_5_bootstrap[4],
+  upper=cor_5_bootstrap[5]
+)
+```
+
+The Pearson correlation is $r$=`r round(cor_5, 2)` (95% CI: `r round(cor_5_ci$lower, 2)`-`r round(cor_5_ci$upper, 2)`).
+
+# Visualizations
+
+Here we plot the visualizations of the participant-generated data on each trial.
+
+```{r plot_visualizations, fig.align="center", fig.height=26, fig.width=12}
 # Import the coordinates of the observations, inner walls, and outer walls.
 source("stimuli/experiment_2/map_specifications.R")
 
@@ -201,88 +845,95 @@ goals = data.frame(
 map_height = 11
 map_width = 11
 
-# Set up the color palette and then the gradient we're going to visualize with.
-palette = colorRampPalette(rev(brewer.pal(11, "Spectral")))
-color_gradient = scale_color_gradientn(colours=palette(100), limits=c(0, 15))
+# Set up the general color palette we're going to visualize with.
+palette = colorRampPalette(brewer.pal(9, "OrRd"))
   
 # Generate the visualizations of the participant-generated paths for each 
 # trial.
-plot_4 = list()
-plot_5 = list()
-for (trial_num in 1:23) {
+plot_10 = list()
+plot_11 = list()
+for (trial_num in 1:length(unique(data_18$map))) {
   # Extract the coordinates of the observation for this trial.
   crumbs = data.frame(
-    x = observations[[trial_num]][1],
-    y = observations[[trial_num]][2],
-    filename = "stimuli/experiment_2/crumbs.png"
+    x=observations[[trial_num]][1],
+    y=observations[[trial_num]][2],
+    filename="stimuli/experiment_2/crumbs.png"
   )
-
+  
+  # Compute the specific color palette based on the longest path for this map.
+  max_path_length = max(filter(data_18, map==maps[trial_num])$time) + 1
+  num_colors = round(max_path_length*1.4)
+  color_gradient = palette(num_colors)[(num_colors-max_path_length):num_colors]
+  
   # Generate the visualization for this trial.
-  plot_3 = data_10 %>%
+  plot_9 = data_18 %>%
     filter(map==maps[trial_num]) %>%
     mutate(x=x+1, y=y+1) %>%
     ggplot() +
     geom_path(aes(x=x, y=y, group=participant, color=time),
-              position=position_jitter(height=0.1, width=0.1)) + 
-    geom_point(aes(x=x, y=y, color=time)) + 
+              position=position_jitter(height=0.1, width=0.1)) +
+    geom_point(aes(x=x, y=y, group=participant, color=time)) +
     scale_x_continuous(name="", limits=c(0, map_width+1)) +
     scale_y_reverse(name="", limits=c(map_height+1, 1)) +
     theme_void() +
-    theme(legend.position="none",
-          axis.title=element_blank(),
-          axis.text=element_blank(),
-          axis.ticks=element_blank()) +
+    theme(legend.position="none") +
     coord_fixed() +
     geom_image(data=crumbs, aes(x=x, y=y, image=filename), size=0.1) +
     geom_rect(data=goals,
               aes(xmin=x_1, xmax=x_2, ymin=y_1, ymax=y_2, fill=label),
               alpha=1.0) +
-    color_gradient +
-    scale_fill_manual(values=c("#FF8F66", "#8293FF", "#7AB532", "#767171"))
+    geom_text(data=goals, aes(label=label, x=(x_1+x_2)/2, y=(y_1+y_2)/2),
+              size=9*(5/14)) +
+    scale_color_gradientn(colors=color_gradient,
+                          limits=c(0, max_path_length-1)) +
+    scale_fill_manual(values=c("#00AfEf", "#ED7D31", "#00B050", "#767171"))
   
   # Add the walls to the visualization.
   for (wall in walls[trial_num][[1]]) {
-    plot_3 = plot_3 + wall
+    plot_9 = plot_9 + wall
   }
   
   # Add the border to the visualization.
   for (segment in segments[trial_num][[1]]) {
-    plot_3 = plot_3 + segment
+    plot_9 = plot_9 + segment
   }
   
   # Store the plot separately before adding a title and adjusting the margins.
-  plot_4[[trial_num]] = plot_3
+  plot_10[[trial_num]] = plot_9
   
   # Add a title to the visualization, adjust the margins, and store it.
-  plot_5[[trial_num]] = plot_3 + 
+  plot_11[[trial_num]] = plot_9 + 
     ggtitle(maps[trial_num]) +
-    theme(plot.title=element_text(size=20, hjust=0.5, vjust=-20.0),
+    theme(plot.title=element_text(size=20, hjust=0.5, vjust=-10.0),
           plot.margin=unit(c(-2, -3, -2, -3), "cm"))
 }
 
 # Plot the visualizations in a grid.
-plot_6 = plot_grid(plot_5[[1]], plot_5[[2]], plot_5[[3]], plot_5[[4]],
-                   plot_5[[5]], plot_5[[6]], plot_5[[7]], plot_5[[8]],
-                   plot_5[[9]], plot_5[[10]], plot_5[[11]], plot_5[[12]],
-                   plot_5[[13]], plot_5[[14]], plot_5[[15]], plot_5[[16]],
-                   plot_5[[17]], plot_5[[18]], plot_5[[19]], plot_5[[20]],
-                   plot_5[[21]], plot_5[[22]], plot_5[[23]],
-                   ncol=4)
-plot_6
+plot_12 = plot_grid(plot_11[[1]], plot_11[[2]], plot_11[[3]], plot_11[[4]],
+                    plot_11[[5]], plot_11[[6]], plot_11[[7]], plot_11[[8]],
+                    plot_11[[9]], plot_11[[10]], plot_11[[11]], plot_11[[12]],
+                    plot_11[[13]], plot_11[[14]], plot_11[[15]], plot_11[[16]],
+                    plot_11[[17]], plot_11[[18]], plot_11[[19]], plot_11[[20]],
+                    plot_11[[21]], plot_11[[22]], plot_11[[23]],
+                    ncol=4)
+plot_12
 ```
 
 ## Saving the visualizations
 
 Here we save the visualizations (excluding the title and margin adjustments).
 
-```{r save, eval=FALSE}
+```{r save_visualizations, eval=FALSE}
 # Save the visualizations.
-for (trial_num in 1:23) {
+for (trial_num in 1:length(unique(data_18$map))) {
   # Stitch the path for this visualization.
   data_path = paste("analysis/experiment_2/visualizations/",
-                    maps[trial_num], ".pdf", sep="")
+                    maps[trial_num], sep="")
   
   # Save this visualization.
-  ggsave(data_path, plot_4[[trial_num]], device="pdf", height=4.5, width=7.3)
+  ggsave(paste(data_path, ".png", sep=""), plot_10[[trial_num]], device="png", 
+         height=4.5, width=7.3)
+  ggsave(paste(data_path, ".pdf", sep=""), plot_10[[trial_num]], device="pdf", 
+         height=4.5, width=7.3)
 }
 ```

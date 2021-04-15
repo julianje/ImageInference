@@ -11,7 +11,7 @@ DATA = sys.argv[1]
 PARTICIPANT = sys.argv[2]
 
 # Initialize the number of reward functions we want to sample.
-NUM_SAMPLES = int(sys.argv[3])
+NUM_REWARDS = int(sys.argv[3])
 
 # Initialize a list of dictionaries that links maps to their doors and 
 # observations.
@@ -136,9 +136,9 @@ for participant in data_0["participant"].unique():
 		# Compute the Bayes factor for this trial while uniformly sampling 
 		# reward functions.
 		likelihoods = []
-		for i in range(NUM_SAMPLES):
-			# Let the user know which sample we're on.
-			print("Sample #: "+str(i))
+		for i in range(NUM_REWARDS):
+			# Let the user know which reward function we're on.
+			print("Reward function #: "+str(i+1))
 
 			# Sample which door both agents use.
 			door = random.choice(doors)
@@ -185,8 +185,8 @@ for participant in data_0["participant"].unique():
 				# If none of the actions have a high probability, perhaps 
 				# because they all have high negative utilities, assign an 
 				# equal action probability to each of them.
-				action_probabilities = [1.0/len(utilities)] * \
-					len(utilities)
+				action_probabilities = [1.0/len(utilities)] \
+					* len(utilities)
 			else:
 				# Otherwise, normalize the action probabilities we've 
 				# computed.

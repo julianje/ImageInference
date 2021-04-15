@@ -1,313 +1,182 @@
 import csv
-import itertools as it
-import matplotlib.pyplot as plt
-import numpy as np
 import sys
 
 from Bishop import *
+
+# Load the map we're simulating.
+WORLD = sys.argv[1]
+
+# Load the (encoded) coordinates of the door(s) and observation for this map.
+ENCODED_DOORS = sys.argv[2]
+ENCODED_OBSERVATIONS = sys.argv[3]
+
+# Initialize the number of utility functions we want to sample.
+NUM_SAMPLES = int(sys.argv[4])
+
+# Initialize the number of paths we want to sample per utility function.
+NUM_PATHS = 1000
+
+# Set the stage of the path we're analyzing.
+STAGE = "entering"
+
+# Set the path for storing the model predictions.
+PATH = "data/experiment_3/model/predictions/Manhattan/"
+
+# Computes the likelihood that one agent was in the room based on the
+# observations. 
+def scene_likelihood_one_agent(agent_0, observations):
+	# Generate paths according to the current map and policy.
+	simulations_0 = agent_0.SimulateAgents(NUM_PATHS, ResampleAgent=False,
+		Simple=False, Verbose=False, replan=False)
+
+	# Iterate through each path and check if it's consistent with the
+	# observations.
+	scene_matches = np.zeros(NUM_PATHS)
+	for i in range(len(simulations_0.States)):
+		# Extract the subset of the path we're analyzing based on the stage.
+		state_sequence_0 = simulations_0.States[i]
+		if STAGE == "entering":
+			path_0 = state_sequence_0[0:len(state_sequence_0)/2]
+		elif STAGE == "exiting":
+			path_0 = state_sequence_0[len(state_sequence_0)/2: \
+				len(state_sequence_0)]
+		elif STAGE == "either":
+			path_0 = state_sequence_0
+
+		# Take the set intersection of the observations and this path.
+		intersection_0 = set(observations).intersection(set(path_0))
+
+		# Check if this path explains the observations.
+		scene_matches[i] = 1.0 if intersection_0 == set(observations) else 0.0
+
+	# Compute the scene likelihood.
+	scene_likelihood = sum(scene_matches) * 1.0 / NUM_PATHS
+
+	return([scene_matches, scene_likelihood, simulations_0])
+
+# Computes the likelihood that two agents were in the room based on the 
+# observations.
+def scene_likelihood_two_agents(agent_1, agent_2, observations):
+	# Generate paths according to the current map and policy.
+	simulations_1 = agent_1.SimulateAgents(NUM_PATHS, ResampleAgent=False, \
+		Simple=False, Verbose=False, replan=False)
+	simulations_2 = agent_2.SimulateAgents(NUM_PATHS, ResampleAgent=False, \
+		Simple=False, Verbose=False, replan=False)
+
+	# Iterate through each pair of paths and check if they're consistent with
+	# the observations.
+	scene_matches = np.zeros(NUM_PATHS)
+	for i in range(len(simulations_1.States)):
+		# Extract the subset of the path we're analyzing based on the stage.
+		state_sequence_1 = simulations_1.States[i]
+		state_sequence_2 = simulations_2.States[i]
+		if STAGE == "entering":
+			path_1 = state_sequence_1[0:len(state_sequence_1)/2]
+			path_2 = state_sequence_2[0:len(state_sequence_2)/2]
+		elif STAGE == "exiting":
+			path_1 = state_sequence_1[len(state_sequence_1)/2: \
+				len(state_sequence_1)]
+			path_2 = state_sequence_2[len(state_sequence_2)/2: \
+				len(state_sequence_2)]
+		elif STAGE == "either":
+			path_1 = state_sequence_1
+			path_2 = state_sequence_2
+
+		# Check that the paths are unique.
+		if path_1 == path_2:
+			continue
+
+		# Take the set intersection of the observations and both paths.
+		intersection_1 = set(observations).intersection(set(path_1))
+		intersection_2 = set(observations).intersection(set(path_2))
+
+		# Check that each path contains at least one of the observations, and
+		# that the union of both paths contains both of the observations.
+		if (len(intersection_1) > 0 and len(intersection_2) > 0) \
+				and intersection_1.union(intersection_2) == set(observations):
+			scene_matches[i] = 1.0
+		else:
+			scene_matches[i] = 0.0
+
+	# Compute the scene likelihood.
+	scene_likelihood = sum(scene_matches) * 1.0 / NUM_PATHS
+
+	return([scene_matches, scene_likelihood, simulations_1, simulations_2])
 
 # Transform x- and y-coordinates into a state representation.
 def transform_state(agent, coords):
 	return (coords[0]*agent.Plr.Map.mapwidth) + coords[1]
 
-# Computes the likelihood that one agent was in the room based on the 
-# observations. 
-# NOTE: This function assumes agents are entering the room.
-def scene_likelihood_one_agent(agent, observations, num_paths):
-	# Generate paths according to the current map and policy.
-	simulations = agent.SimulateAgents(num_paths, ResampleAgent=False, 
-		Simple=False, Verbose=False, replan=False)
+# Create three agents for this map (while suppressing print output).
+sys.stdout = open(os.devnull, "w")
+agent_0 = LoadObserver("stimuli/experiment_3/"+WORLD, Silent=True)
+agent_1 = LoadObserver("stimuli/experiment_3/"+WORLD, Silent=True)
+agent_2 = LoadObserver("stimuli/experiment_3/"+WORLD, Silent=True)
+sys.stdout = sys.__stdout__
 
-	# Iterate through each path and check if it's consistent with the 
-	# observations.
-	scene_matches = np.zeros(num_paths)
-	for i in range(len(simulations.States)):
-		# Take the set intersection of the observations and this path.
-		intersection = set(observations).intersection(set( \
-			simulation.States[i][0:lne(simulation.States[i])/2]))
+# Decode the coordinates of the doors and the observation for this map.
+doors = [[int(num) for num in pair.split(" ")] \
+	for pair in ENCODED_DOORS.split("-")]
+observations = [transform_state(agent_0, \
+	[int(num) for num in pair.split(" ")]) \
+	for pair in ENCODED_OBSERVATIONS.split("-")]
 
-		# Check if this path explains the observations.
-		scene_matches = 1.0 if intersection == set(observations) else 0.0
+# Sample utility functions and compute the likelihood of the scene given
+# a set of sampled paths.
+print("Map: "+WORLD)
+results_one_agent = [0] * NUM_SAMPLES
+results_two_agents = [0] * NUM_SAMPLES
+for i in range(NUM_SAMPLES):
+	# Let the user know which sample we're on.
+	print("Utility function #: "+str(i+1))
 
-	return([
-		agent.Plr.Agent.rewards,
-		agent.Plr.GetPlanDistribution(),
-		sum(scene_matches)*1.0/num_paths,
-		scene_matches,
-		simulations
-	])
-
-# Computes the likelihood that two agents were in the room based on the 
-# observations. 
-# NOTE: This function assumes agents are entering the room.
-def scene_likelihood_two_agents(agent_0, agent_1, observations, num_paths):
-	# Generate paths according to the current map and policy.
-	simulations_0 = agent_0.SimulateAgents(rollouts, ResampleAgent=False, \
-		Simple=False, Verbose=False, replan=False),
-	simulations_1 = agent_1.SimulateAgents(rollouts, ResampleAgent=False, \
-		Simple=False, Verbose=False, replan=False)
-
-	# Iterate through each pair of pahts and check if they're consistent with 
-	# the observations.
-	scene_matches = np.zeros(num_paths)
-	for i in range(len(simulations[0].States)):
-		# Take the set intersection of the observations and both paths.
-		intersection_0 = set(observations).intersection(set( \
-			simulations_0.States[i][0:len(simulations_0.States[i])/2]))
-		intersection_1 = set(observations).intersection(set( \
-			simulations_1.States[i][0:len(simulations_1.States[i])/2]))
-
-		# Check if each path explains exactly one of the observations.
-		if (len(intersection_0) == 1 and len(intersection_1) == 1) \
-			and intersection_0.union(intersection_1) == set(observations):
-			scene_matches[i] = 1.0
-		else:
-			scene_matches[i] = 0.0
-
-	return([
-		[
-			agent_0.Plr.Agent.rewards, 
-			agent_0.Plr.GetPlanDistribution(), 
-			sum(scene_matches)*1.0/num_paths, 
-			scene_matches,
-			simulations_0
-		], 
-		[
-			agent_1.Plr.Agent.rewards, 
-			agent_1.Plr.GetPlanDistribution(), 
-			sum(scene_matches)*1.0/num_paths, 
-			scene_matches, 
-			simulations_1
-		]
-	])
-
-# Number of reward functions to sample.
-samples = 1000
-
-# Number of paths to sample (per reward function).
-num_paths = 1000
-
-# Determine how much information we want to output.
-verbose = False
-
-# Set the path for saving data.
-path = "data/experiment_3/model/predictions/"
-
-# Set whether we are using the cluster or not, then load the trial information.
-world = sys.argv[1]
-doors = [[int(num) for num in pair.split(" ")] for pair in sys.argv[2].split("-")]
-observations = [[int(num) for num in pair.split(" ")] for pair in sys.argv[3].split("-")]
-
-
-agent_0 = LoadObserver("stimuli/experiment_3/"+world, Silent=True),
-agent_1 = LoadObserver("stimuli/experiment_3/"+world, Silent=True)
-Scene = [TranslateState(Agents[0], Obs) for Obs in Observation]
-results_one_agent = [-1] * samples
-results_two_agents = [-1] * samples
-for i in range(Samples):
-	print("Reward function #"+str(i+1))
-
+	# Sample which door each agent will use.
 	door_0 = random.choice(doors)
-	agent_0.SetStartingPoint(door_0[0], Verbose=False)
-	agent_0.Plr.Map.ExitState = door_0[1]
-	agent_0.Plr.Agent.ResampleAgent()
-	agent_1.Plr.Prepare() # Maybe set "Validate=False"
-
 	door_1 = random.choice(doors)
+	door_2 = random.choice(doors)
+	agent_0.SetStartingPoint(door_0[0], Verbose=False)
 	agent_1.SetStartingPoint(door_1[0], Verbose=False)
+	agent_2.SetStartingPoint(door_2[0], Verbose=False)
+	agent_0.Plr.Map.ExitState = door_0[1]
 	agent_1.Plr.Map.ExitState = door_1[1]
-	agent_1.Plr.Agent.ResampleAgent()
-	agent_1.Plr.Prepare() # Maybe set "Validate=False"
+	agent_2.Plr.Map.ExitState = door_2[1]
 
-	results_one_agent[i] = scene_likelihood_one_agent(agents_0, observations, \
-		num_paths)
-	results_two_agents[i] = scene_likelihood_two_agents(agent_0, agent_1, \
-		observations, num_paths)
+	# Run the planner for each agent (while supressing print output).
+	sys.stdout = open(os.devnull, "w")
+	agent_0.Plr.Prepare()
+	agent_1.Plr.Prepare()
+	agent_2.Plr.Prepare()
+	sys.stdout = sys.__stdout__
 
-# Debugging
-TotalPlanDistribution = [0, 0, 0]
-for i in range(Samples):
-	TotalPlanDistribution = np.array(TotalPlanDistribution) + np.array(ResultsOneAgent[i][1])
-print(TotalPlanDistribution)
+	# Randomly sample utility functions (instead of reward functions) so that
+	# agents aren't influenced by how far the goals are.
+	agent_0.Plr.Utilities = np.array([random.random()*100 \
+		for goal in agent_0.Plr.Map.ObjectNames])
+	agent_1.Plr.Utilities = np.array([random.random()*100 \
+		for goal in agent_1.Plr.Map.ObjectNames])
+	agent_2.Plr.Utilities = np.array([random.random()*100 \
+		for goal in agent_2.Plr.Map.ObjectNames])
 
-TotalPlanDistribution = [0, 0, 0]
-TotalRewardDistribution = [0, 0, 0]
-for i in range(Samples):
-	TotalPlanDistribution = np.array(TotalPlanDistribution) + np.array(ResultsTwoAgents[i][0][1])
-	TotalRewardDistribution = np.array(TotalRewardDistribution) \
-	+ (np.array(ResultsTwoAgents[i][0][0]) == np.max(np.array(ResultsTwoAgents[i][0][0]))) + 0.0
-print("Plan distribution: " + str(TotalPlanDistribution))
-print("Reward distribution: " + str(TotalRewardDistribution))
-
-TotalPlanDistribution = [0, 0, 0]
-TotalRewardDistribution = [0, 0, 0]
-for i in range(Samples):
-	TotalPlanDistribution = np.array(TotalPlanDistribution) + np.array(ResultsTwoAgents[i][1][1])
-	TotalRewardDistribution = np.array(TotalRewardDistribution) \
-	+ (np.array(ResultsTwoAgents[i][1][0]) == np.max(np.array(ResultsTwoAgents[i][1][0]))) + 0.0
-print("Plan distribution: " + str(TotalPlanDistribution))
-print("Reward distribution: " + str(TotalRewardDistribution))
-
-##########
-# Export #
-##########
-
-# Put the samples in a dictionary
-ActionPosterior = {}
-StatePosterior = {}
-# for R in results[i]:
-for R in ResultsOneAgent:
-	# Second entry encodes entire likelihood of reward function.
-	# So if reward function can't generate scene then don't bother.
-	if R[2] != 0:
-		# R[3] has a boolean vector of which samples match image
-		for sampleno in range(len(R[3])):
-			action = R[4].Actions[sampleno]
-			states = R[4].States[sampleno]
-			ImageMatch = False if R[3][sampleno] == 0 else True
-			# If action will have probability zero because it never matched scene, then don't bother.
-			if ImageMatch:
-				# If action is already in dictionary just add the new probability.
-				if tuple(action) in ActionPosterior:
-					ActionPosterior[tuple(action)] += R[2] # Likelihood of reward function * likelihood of action generating scene
-				else:
-					ActionPosterior[tuple(action)] = R[2]
-				# Same for scenes
-				if tuple(states) in StatePosterior:
-					StatePosterior[tuple(states)] += R[2] # Likelihood of reward function * likelihood of action generating scene
-				else:
-					StatePosterior[tuple(states)] = R[2]
-
-# Remove dictionary ugliness and normalize
-ca = sum(ActionPosterior.values())
-InferredActions = [ActionPosterior.keys(), ActionPosterior.values()]
-InferredActions[1] = [x/ca for x in InferredActions[1]]
-
-cb = sum(StatePosterior.values())
-InferredStates = [StatePosterior.keys(), StatePosterior.values()]
-InferredStates[1] = [x/cb for x in InferredStates[1]]
-
-# Save the state posterior as a csv so we can visualize them in R
-# File = path + TrialName + "_States_Posterior_" + filenames[i] + ".csv"
-File = path + TrialName + "_States_Posterior_" + "one_agent" + ".csv"
-# File = path + TrialName + "_States_Posterior_" + "one_agent_C-only" + ".csv"
-with open(File, "w") as model_inferences:
-	model_writer = csv.writer(model_inferences, delimiter=",", lineterminator="\n")
-	try:
-		ObservationLength = max([len(x) for x in InferredStates[0]]) # 
-		model_writer.writerow(["MapHeight", "MapWidth", "Scene0", "Scene1", "Probability"] + 
-		["Obs"+str(i) for i in range(ObservationLength)])
-		for i in range(len(InferredStates[1])):
-			model_writer.writerow(
-				[
-					Agents[0].Plr.Map.mapheight, 
-					Agents[0].Plr.Map.mapwidth, 
-					Scene[0],
-					Scene[1],
-					InferredStates[1][i]
-				] 	
-				+ list(InferredStates[0][i])
-			)
-	except:
-		pass
-	
-###########################
-
-ActionPosterior = {}
-StatePosterior = {}
-# for R in results[i]:
-# print("====================================")
-# print(np.shape(ResultsTwoAgents))
-agent_0 = np.array(ResultsTwoAgents)[:, 0].tolist()
-agent_1 = np.array(ResultsTwoAgents)[:, 1].tolist()
-# print(np.shape(agent_0), np.shape(agent_1))
-# print("====================================")
-for s in range(Samples):
-	# Second entry encodes entire likelihood of reward function.
-	# So if reward function can't generate scene then don't bother.
-	if agent_0[s][2] != 0:
-		# R[3] has a boolean vector of which samples match image
-		for sampleno in range(rollouts):
-			action_0 = agent_0[s][4].Actions[sampleno]
-			action_1 = agent_1[s][4].Actions[sampleno]
-			states_0 = agent_0[s][4].States[sampleno]
-			states_1 = agent_1[s][4].States[sampleno]
-			ImageMatch = False if agent_0[s][3][sampleno] == 0.0 else True
-			# If action will have probability zero because it never matched scene, then don't bother.
-			if ImageMatch:
-				key = tuple(action_0 + [-1] + action_1)
-				if key in ActionPosterior:
-					ActionPosterior[key] += agent_0[s][2]
-				else:
-					ActionPosterior[key] = agent_0[s][2]
-				key = tuple(states_0 + [-1] + states_1)
-				# print("=========== KEY ==============")
-				# print(key)
-				if key in StatePosterior:
-					StatePosterior[key] += agent_0[s][2]
-				else:
-					StatePosterior[key] = agent_0[s][2]
-
-# Remove dictionary ugliness and normalize
-ca = sum(ActionPosterior.values())
-InferredActions = [ActionPosterior.keys(), ActionPosterior.values()]
-InferredActions[1] = [x/ca for x in InferredActions[1]]
-
-cb = sum(StatePosterior.values())
-InferredStates = [StatePosterior.keys(), StatePosterior.values()]
-InferredStates[1] = [x/cb for x in InferredStates[1]]
-
-# Save the state posterior as a csv so we can visualize them in R
-File = path + TrialName + "_States_Posterior_" + "two_agents" + ".csv"
-# File = path + TrialName + "_States_Posterior_" + "two_agents_C-only" + ".csv"
-with open(File, "w") as model_inferences:
-	model_writer = csv.writer(model_inferences, delimiter=",", lineterminator="\n")
-	ObservationLength_0 = 0
-	ObservationLength_1 = 0
-	for i in range(len(InferredStates[0])):
-		divider = np.argmax((np.array(InferredStates[0][i]) == -1) + 0.0)
-		first_half = list(InferredStates[0][i][0:divider])
-		second_half = list(InferredStates[0][i][divider+1:])
-		if len(first_half) > ObservationLength_0:
-			ObservationLength_0 = len(first_half)
-		if len(second_half) > ObservationLength_1:
-			ObservationLength_1 = len(second_half)
-	model_writer.writerow(["MapHeight", "MapWidth", "Scene0", "Scene1", "Probability"] + 
-		["Obs0_"+str(i) for i in range(ObservationLength_0)] + ["Obs1_"+str(i) for i in range(ObservationLength_1)])
-	for i in range(len(InferredStates[0])):
-		divider = np.argmax((np.array(InferredStates[0][i]) == -1) + 0.0)
-		model_writer.writerow(
-			[
-				Agents[0].Plr.Map.mapheight, 
-				Agents[0].Plr.Map.mapwidth, 
-				Scene[0],
-				Scene[1],
-				InferredStates[1][i]
-			]
-			+ list(InferredStates[0][i][0:divider])
-			+ ["NA" for j in range(ObservationLength_0-divider)]
-			+ list(InferredStates[0][i][divider+1:])
-		)
-
-#############
-# Normalize #
-#############
+	# Compute the likelihood of the observations if one or two agents were in
+	# the room.
+	results_one_agent[i] = scene_likelihood_one_agent(agent_0, observations)
+	results_two_agents[i] = scene_likelihood_two_agents(agent_1, agent_2,
+		observations)
 
 # Compute the mean likelihood over sampled reward functions for one agent.
-MeanLikelihoodOneAgent = np.mean([ResultsOneAgent[i][2] for i in range(np.shape(ResultsOneAgent)[0])])
+mean_likelihood_one_agent = np.mean([results_one_agent[i][1] \
+	for i in range(NUM_SAMPLES)])
 
 # Compute the mean likelihood over sampled reward functions for two agents.
-MeanLikelihoodTwoAgents = np.mean([ResultsTwoAgents[i][0][2] for i in range(np.shape(ResultsTwoAgents)[0])])
-
-#############
-# Posterior #
-#############
+mean_likelihood_two_agents = np.mean([results_two_agents[i][1] \
+	for i in range(NUM_SAMPLES)])
 
 # Compute the posterior using Bayes' theorem.
-print(MeanLikelihoodOneAgent, MeanLikelihoodTwoAgents)
-Posterior = MeanLikelihoodTwoAgents / (MeanLikelihoodOneAgent+MeanLikelihoodTwoAgents)
+evidence = mean_likelihood_one_agent + mean_likelihood_two_agents
+posterior = 0 if evidence == 0 else (mean_likelihood_two_agents/evidence)
 
 # Write the data to a file.
-with open(path+world+".csv", "w") as file:
+with open(PATH+WORLD+"_agents_posterior.csv", "w") as file:
 	writer = csv.writer(file)
-	writer.writerow([world, MeanLikelihoodOneAgent, MeanLikelihoodTwoAgents, Posterior])
+	writer.writerow([WORLD, mean_likelihood_one_agent, \
+		mean_likelihood_two_agents, posterior])

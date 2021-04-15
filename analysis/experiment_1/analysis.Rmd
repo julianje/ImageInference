@@ -1,10 +1,10 @@
 ---
-title: "Image Inference - Experiment 1"
+title: "Image Inference (Experiment 1)"
 output:
+  pdf_document: default
   html_document:
     code_folding: hide
     df_print: paged
-  pdf_document: default
 ---
 
 ```{r setup, echo=FALSE}
@@ -30,20 +30,25 @@ model_path = "data/experiment_1/model/predictions/Manhattan"
 ```{r libraries, echo=FALSE}
 # Import R libraries.
 library(boot)
+library(cowplot)
+library(ggimage)
+library(glmnet)
 library(jsonlite)
-library(nnet)
+library(RColorBrewer)
 library(tidyverse)
 ```
 
 # Preprocessing
 
 ```{r preprocessing}
-# Read in the participant data (after manually removing errors).
-data_0 <- read_csv(file.path(human_path, "raw_data.csv"), quote="~")
+# Read in the participant data.
+data_0 = read_csv(file.path(human_path, "raw_data.csv"), quote="~")
 
 # Read in the MTurk results file.
-mturk_results = read_csv(file.path(human_path, "mturk_results.csv"), col_names=TRUE) %>%
-  mutate(Answer.surveycode=substr(Answer.surveycode, 3, length(Answer.surveycode))) %>%
+mturk_results = read_csv(file.path(human_path, "mturk_results.csv"),
+                         col_names=TRUE) %>%
+  mutate(Answer.surveycode=substr(Answer.surveycode, 3,
+                                  length(Answer.surveycode))) %>%
   filter(AssignmentStatus=="Approved")
 
 # Check for invalid survey codes.
@@ -72,11 +77,63 @@ for (p in 1:length(data_1)) {
 
 # Write the preprocessed data.
 write_csv(data_3, file.path(human_path, "data.csv"))
+
+# Combine the posterior over goals for each of the maps.
+model_1 = tibble()
+goal_files = list.files(model_path, pattern="_goal")
+for (goal_file in goal_files) {
+  # Read in the goal predictions for this map and do some preprocessing.
+  model_0 = read_csv(file.path(model_path, goal_file)) %>%
+    mutate(map=gsub("_goals_posterior.csv", "", goal_file),
+           goal=ifelse(goal=="Blue", "A",
+                       ifelse(goal=="Orange", "B", "C")))
+  
+  # Stack these goal predictions.
+  model_1 = model_1 %>%
+    rbind(model_0)
+}
+
+# Write the goal predictions.
+write_csv(model_1, file.path(model_path, "goal_predictions.csv"))
+
+# Combine the posterior over entrances for each of the maps.
+model_5 = tibble()
+state_files = list.files(model_path, pattern="_state")
+for (state_file in state_files) {
+  # Read in the path predictions.
+  model_2 = read_csv(file.path(model_path, state_file))
+  
+  # Do some preprocessing.
+  model_3 = model_2 %>%
+    rownames_to_column("path") %>%
+    gather(step, state, names(model_2)[grepl("s_", names(model_2))]) %>%
+    separate(step, into=c("temp", "time"), sep="_") %>%
+    mutate(path=as.numeric(path)-1, time=as.numeric(time),
+           state=as.numeric(state)) %>%
+    arrange(path, time) %>%
+    mutate(x=state%%map_width+1, y=ceiling(state/map_width)) %>%
+    select(-temp, -map_height, -map_width)
+  
+  # Extract the the first state from each path (i.e., the entrance).
+  model_4 = model_3 %>%
+    filter(time==0) %>%
+    group_by(state) %>%
+    summarize(probability=sum(probability)) %>%
+    rename(entrance=state) %>%
+    mutate(map=gsub("_states_posterior.csv", "", state_file))
+  
+  # Stack these entrance predictions.
+  model_5 = model_5 %>%
+    rbind(model_4)
+}
+
+# Write the entrance predictions.
+write_csv(model_5, file.path(model_path, "entrance_predictions.csv"))
 ```
 
 # Goal Inference
 
-First, we generate a scatter plot comparing our model predictions with participant judgments on the goal inferences.
+Here we generate a scatter plot comparing participant judgments ($N$=`r length(age)`; $M$=`r round(mean(age), 2)` years, $SD$=`r round(sd(age), 2)` years) against our model predictions on the goal inferences.
 
 ```{r goal_inference, fig.align="center"}
 # Read in the preprocessed data.
@@ -110,47 +167,56 @@ compute_bootstrap = function(data) {
 set.seed(seed)
 ci = data.frame()
 for (m in unique(data_4$map)) {
-    # Compute the bootstrap for each dependent measure.
-    A_bootstrap = compute_bootstrap(filter(data_4, map==m, goal=="A")$human)
-    B_bootstrap = compute_bootstrap(filter(data_4, map==m, goal=="B")$human)
-    C_bootstrap = compute_bootstrap(filter(data_4, map==m, goal=="C")$human)
-    
-    # Store the bootstrapped 95% CIs for this pair.
-    ci = rbind(ci, data.frame(map=rep(m, 3),
-                              goal=c("A", "B", "C"),
-                              lower=c(A_bootstrap[4], B_bootstrap[4], C_bootstrap[4]),
-                              upper=c(A_bootstrap[5], B_bootstrap[5], C_bootstrap[5])))
+  # Filter the current map.
+  data_5 = data_4 %>%
+    filter(map==m)
+  
+  # Compute the bootstrap for each dependent measure.
+  bootstrap_A = compute_bootstrap(filter(data_5, goal=="A")$human)
+  bootstrap_B = compute_bootstrap(filter(data_5, goal=="B")$human)
+  bootstrap_C = compute_bootstrap(filter(data_5, goal=="C")$human)
+  
+  # Store the bootstrapped 95% CIs for this pair.
+  ci = rbind(ci, data.frame(map=rep(m, 3),
+                            goal=c("A", "B", "C"),
+                            lower=c(bootstrap_A[4],
+                                    bootstrap_B[4],
+                                    bootstrap_C[4]),
+                            upper=c(bootstrap_A[5],
+                                    bootstrap_B[5],
+                                    bootstrap_C[5])))
 }
 
 # Read in the goal predictions.
-model_0 = read_csv(file.path(model_path, "goal_predictions.csv"))
+model_6 = read_csv(file.path(model_path, "goal_predictions.csv"))
 
 # Perform some basic preprocessing and then z-score the model predictions.
-model_1 = model_0 %>%
-  select(-Goal) %>%
-  rename(goal=GoalLetter, map=Trial, model=Probability) %>%
-  mutate(z_model=scale(model))
+model_7 = model_6 %>%
+  rename(model=probability) %>%
+  mutate(z_model=scale(model)[,1])
 
-# Merge the z-scored participant judgments with the bootstrapped 95% CIs and the model predictions.
-data_5 = data_4 %>%
+# z-score the participant judgments and then merge them with the bootstrapped
+# 95% CIs and the model predictions.
+data_6 = data_4 %>%
   group_by(unique_id) %>%
-  mutate(z_human=scale(human)) %>%
+  mutate(z_human=scale(human)[,1]) %>%
   ungroup() %>%
   group_by(map, goal) %>%
   summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
+  ungroup() %>%
   left_join(ci) %>%
-  left_join(model_1)
+  left_join(model_7)
 
 # Plot the goal comparison.
-plot_0 = data_5 %>%
+plot_0 = data_6 %>%
   ggplot(aes(x=model, y=mean_human, label=map)) +
   geom_point(aes(color=substr(map, 0, 2))) +
-  # geom_text(vjust=-1.0) +
   geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
   ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
   xlab("Model Predictions") +
   ylab("Human Judgments") +
-  scale_color_discrete(name="Goal") + 
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Goal Type:") + 
   theme_classic() +
   theme(aspect.ratio=1.0,
         plot.title=element_text(hjust=0.5),
@@ -176,19 +242,19 @@ compute_bootstrap = function(data) {
 
 # Compute the correlation and its bootstrapped 95% CI.
 set.seed(seed)
-cor_0 = cor(data_5$model, data_5$mean_human, method="pearson")
-cor_0_bootstrap = compute_bootstrap(data_5)
+cor_0 = cor(data_6$model, data_6$mean_human, method="pearson")
+cor_0_bootstrap = compute_bootstrap(data_6)
 cor_0_ci = data.frame(
   lower=cor_0_bootstrap[4],
   upper=cor_0_bootstrap[5]
 )
 ```
 
-The Pearson correlation is _r_ = `r round(cor_0, 2)` (95% CI: `r round(cor_0_ci$lower, 2)`-`r round(cor_0_ci$upper, 2)`). Next, we generate comparisons for each trial.
+The Pearson correlation is $r$=`r round(cor_0, 2)` (95% CI: `r round(cor_0_ci$lower, 2)`-`r round(cor_0_ci$upper, 2)`). Next, we generate comparisons for each trial.
 
 ```{r goal_inference_per_trial, fig.align="center"}
 # Plot goal inferences by trial.
-plot_1 = data_5 %>%
+plot_1 = data_6 %>%
   gather(type, value, mean_human, model) %>%
   ggplot(aes(x=goal, y=value, group=type)) +
   geom_point(aes(color=type)) +
@@ -197,22 +263,23 @@ plot_1 = data_5 %>%
   facet_wrap(~map) +
   xlab("Goal") +
   ylab("Value") +
-  scale_color_discrete(name="Type",
+  scale_color_discrete(name="Observer Type:",
                        limits=c("mean_human", "model"),
                        labels=c("Human", "Model")) +
   theme_classic() +
   theme(aspect.ratio=1.0,
-        legend.title=element_text(hjust=0.5))
+        legend.title=element_text(hjust=0.5),
+        strip.text=element_text(size=7))
 plot_1
 ```
 
 # Entrance Inference
 
-First, we generate a scatter plot comparing our model predictions with participant judgments on the entrance inferences.
+Here we generate a scatter plot comparing participant judgments ($N$=`r length(age)`; $M$=`r round(mean(age), 2)` years, $SD$=`r round(sd(age), 2)` years) against our model predictions on the entrance inferences.
 
 ```{r entrance_inference, fig.align="center"}
 # Select and normalize the entrance judgments.
-data_6 = data_3 %>%
+data_7 = data_3 %>%
   filter(!grepl("ND", map)) %>%
   select(unique_id, map, `1`, `2`, `3`) %>%
   gather(entrance, human, `1`, `2`, `3`) %>%
@@ -240,60 +307,72 @@ compute_bootstrap = function(data) {
 # Compute the bootstrapped 95% CIs.
 set.seed(seed)
 ci = data.frame()
-for (m in unique(data_6$map)) {
-    # Compute the bootstrap for each dependent measure.
-    bootstrap_1 = compute_bootstrap(filter(data_6, map==m, entrance=="1")$human)
-    bootstrap_2 = compute_bootstrap(filter(data_6, map==m, entrance=="2")$human)
-    if (length(unique(filter(data_6, map==m)$entrance)) == 3) {
-      bootstrap_3 = compute_bootstrap(filter(data_6, map==m, entrance=="3")$human)
-    }
-    
-    # Store the bootstrapped 95% CIs for this pair.
-    if (length(unique(filter(data_6, map==m)$entrance)) == 3) {
-      ci = rbind(ci, data.frame(map=rep(m, 3),
-                                entrance=c("1", "2", "3"),
-                                lower=c(bootstrap_1[4], bootstrap_2[4], bootstrap_3[4]),
-                                upper=c(bootstrap_1[5], bootstrap_2[5], bootstrap_3[5])))
-    }
-    else {
-      ci = rbind(ci, data.frame(map=rep(m, 2),
-                                entrance=c("1", "2"),
-                                lower=c(bootstrap_1[4], bootstrap_2[4]),
-                                upper=c(bootstrap_1[5], bootstrap_2[5])))
-    }
+for (m in unique(data_7$map)) {
+  # Filter the current map.
+  data_8 = data_7 %>%
+    filter(map==m)
+  
+  # Compute the bootstrap for each dependent measure.
+  bootstrap_1 = compute_bootstrap(filter(data_8, entrance=="1")$human)
+  bootstrap_2 = compute_bootstrap(filter(data_8, entrance=="2")$human)
+  if (length(unique(data_8$entrance)) == 3) {
+    bootstrap_3 = compute_bootstrap(filter(data_8, entrance=="3")$human)
+  }
+  
+  # Store the bootstrapped 95% CIs for this pair.
+  if (length(unique(data_8$entrance)) == 3) {
+    ci = rbind(ci, data.frame(map=rep(m, 3),
+                              entrance=c("1", "2", "3"),
+                              lower=c(bootstrap_1[4],
+                                      bootstrap_2[4],
+                                      bootstrap_3[4]),
+                              upper=c(bootstrap_1[5],
+                                      bootstrap_2[5],
+                                      bootstrap_3[5])))
+  }
+  else {
+    ci = rbind(ci, data.frame(map=rep(m, 2),
+                              entrance=c("1", "2"),
+                              lower=c(bootstrap_1[4],
+                                      bootstrap_2[4]),
+                              upper=c(bootstrap_1[5],
+                                      bootstrap_2[5])))
+  }
 }
 
 # Read in the entrance predictions.
-model_2 = read_csv(file.path(model_path, "entrance_predictions.csv"))
+model_8 = read_csv(file.path(model_path, "entrance_predictions.csv"))
 
 # Stitch the entrance mapping to the predictions and do some preprocessing.
-model_3 = model_2 %>%
+model_9 = model_8 %>%
   right_join(read_csv(file.path(model_path, "entrance_mapping.csv"))) %>%
-  mutate(Probability=ifelse(is.na(Probability), 0, Probability)) %>%
-  select(-Entrance) %>%
-  rename(map=TrialName, entrance=DoorNumber, model=Probability) %>%
-  mutate(entrance=as.character(entrance), z_model=scale(model))
+  mutate(probability=ifelse(is.na(probability), 0, probability)) %>%
+  select(-entrance) %>%
+  rename(entrance=number, model=probability) %>%
+  mutate(entrance=as.character(entrance), z_model=scale(model)[,1])
 
-# Select the entrance judgments, norm them, then z-score within participants.
-data_7 = data_6 %>%
+# z-score the participant judgments and then merge them with the bootstrapped
+# 95% CIs and the model predictions.
+data_9 = data_7 %>%
   group_by(unique_id) %>%
-  mutate(z_human=scale(human)) %>%
+  mutate(z_human=scale(human)[,1]) %>%
   ungroup() %>%
   group_by(map, entrance) %>%
   summarize(mean_human=mean(human), mean_z_human=mean(z_human)) %>%
+  ungroup() %>%
   left_join(ci) %>%
-  left_join(model_3)
+  left_join(model_9)
 
 # Plot the entrance comparison.
-plot_2 = data_7 %>%
+plot_2 = data_9 %>%
   ggplot(aes(x=model, y=mean_human, label=map)) +
   geom_point(aes(color=substr(map, 0, 2))) +
-  # geom_text(vjust=-1.0) +
   geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
   ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
   xlab("Model Predictions") +
   ylab("Human Judgments") +
-  scale_color_discrete(name="Entrance") +
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Entrance Type:") +
   theme_classic() + 
   theme(aspect.ratio=1.0,
         plot.title=element_text(hjust=0.5),
@@ -319,19 +398,19 @@ compute_bootstrap = function(data) {
 
 # Compute the bootstrapped 95% CI.
 set.seed(seed)
-cor_1 = cor(data_7$model, data_7$mean_human, method="pearson")
-cor_1_bootstrap = compute_bootstrap(data_5)
+cor_1 = cor(data_9$model, data_9$mean_human, method="pearson")
+cor_1_bootstrap = compute_bootstrap(data_9)
 cor_1_ci = data.frame(
   lower=cor_1_bootstrap[4],
   upper=cor_1_bootstrap[5]
 )
 ```
 
-The Pearson correlation is _r_ = `r round(cor_1, 2)` (95% CI: `r round(cor_1_ci$lower, 2)`-`r round(cor_1_ci$upper, 2)`). Next, we generate comparisons for each trial.
+The Pearson correlation is $r$=`r round(cor_1, 2)` (95% CI: `r round(cor_1_ci$lower, 2)`-`r round(cor_1_ci$upper, 2)`). Next, we generate comparisons for each trial.
 
 ```{r entrance_inference_per_trial, fig.align="center"}
 # Plot entrance inferences by trial.
-plot_3 = data_7 %>%
+plot_3 = data_9 %>%
   gather(type, value, mean_human, model) %>%
   ggplot(aes(x=entrance, y=value, group=type)) +
   geom_point(aes(color=type)) +
@@ -340,7 +419,7 @@ plot_3 = data_7 %>%
   facet_wrap(~map) +
   xlab("Entrance") +
   ylab("Value") +
-  scale_color_discrete(name="Type",
+  scale_color_discrete(name="Observer Type:",
                        limits=c("mean_human", "model"),
                        labels=c("Human", "Model")) +
   theme_classic() +
@@ -355,20 +434,20 @@ Finally, we can combine both scatter plots.
 
 ```{r combined_inference, fig.align="center"}
 # Merge the two inferences.
-data_8 = data_5 %>%
+data_10 = data_6 %>%
   mutate(type="goal", inference=goal) %>%
   select(-goal) %>%
-  rbind(select(mutate(data_7, type="entrance", inference=entrance), -entrance))
+  rbind(select(mutate(data_9, type="entrance", inference=entrance), -entrance))
 
-plot_4 = data_8 %>%
+plot_4 = data_10 %>%
   ggplot(aes(x=model, y=mean_human, label=map)) +
   geom_point(aes(color=type)) +
-  # geom_text(vjust=-1.0, hjust=-1.0) +
   geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
   ggtitle("Combined Model Predictions vs. Participant Judgments") +
   xlab("Model Predictions") +
   ylab("Participant Judgments") +
-  scale_color_discrete(name="Type",
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Inference Type:",
                        limits=c("entrance", "goal"),
                        labels=c("Entrance", "Goal")) +
   theme_classic() +
@@ -396,15 +475,15 @@ compute_bootstrap = function(data) {
 
 # Compute the bootstrapped 95% CI.
 set.seed(seed)
-cor_2 = cor(data_8$model, data_8$mean_human, method="pearson")
-cor_2_bootstrap = compute_bootstrap(data_8)
+cor_2 = cor(data_10$model, data_10$mean_human, method="pearson")
+cor_2_bootstrap = compute_bootstrap(data_10)
 cor_2_ci = data.frame(
   lower=cor_2_bootstrap[4],
   upper=cor_2_bootstrap[5]
 )
 ```
 
-The Pearson correlation is _r_ = `r round(cor_2, 2)` (95% CI: `r round(cor_2_ci$lower, 2)`-`r round(cor_2_ci$upper, 2)`).
+The Pearson correlation is $r$=`r round(cor_2, 2)` (95% CI: `r round(cor_2_ci$lower, 2)`-`r round(cor_2_ci$upper, 2)`).
 
 # Alternative Models
 
@@ -415,17 +494,18 @@ The Pearson correlation is _r_ = `r round(cor_2, 2)` (95% CI: `r round(cor_2_ci$
 Now we test if we can predict model error as a function of how many doors there are in each map. First, we generate a scatter plot of the goal inferences that colors each point based on the number of entrances.
 
 ```{r goal_inference_by_entrance_count, fig.align="center"}
-plot_5 = data_5 %>%
+plot_5 = data_6 %>%
   mutate(num_entrances=ifelse(grepl("ND", substr(map, 1, 2)), 1,
-                              ifelse(grepl("DX|NX", substr(map, 1, 2)), 2, 3))) %>%
+                              ifelse(grepl("DX|NX", substr(map, 1, 2)), 2,
+                                     3))) %>%
   ggplot(aes(x=model, y=mean_human, label=map)) +
   geom_point(aes(color=factor(num_entrances))) +
-  # geom_text(vjust=-1.0) +
   geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
   ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
   xlab("Model Predictions") +
   ylab("Human Judgments") +
-  scale_color_discrete(name="Number of\nEntrances") + 
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Number of\nEntrances:") + 
   theme_classic() +
   theme(aspect.ratio=1.0,
         plot.title=element_text(hjust=0.5),
@@ -436,179 +516,29 @@ plot_5
 There doesn't seem to be anything here, but let's compute a linear regression that predicts model error on the goal inferences as a function of the number of entrances in each map. 
 
 ```{r alternative_model_0_goal_error}
-data_9 = data_4 %>%
-  left_join(model_1) %>%
-  mutate(model_error=human-model,
-         num_entrances=ifelse(grepl("ND", substr(map, 1, 2)), 1,
-                          ifelse(grepl("DX|NX", substr(map, 1, 2)), 2, 3)))
-alternative_0_goal_error = lm(formula=model_error~num_entrances, data=data_9)
+data_11 = data_6 %>%
+  mutate(model_error=abs(mean_human-model)) %>%
+  group_by(map) %>%
+  summarize(mean_model_error=mean(model_error)) %>%
+  mutate(num_entrances=ifelse(grepl("ND", substr(map, 1, 2)), 1,
+                              ifelse(grepl("DX|NX", substr(map, 1, 2)), 2, 3)))
+alternative_0_goal_error = lm(formula=mean_model_error~num_entrances, 
+                              data=data_11)
 summary(alternative_0_goal_error)
 ```
 
-Number of entrances doesn't predict model error on the goal inferences. Next, we generate a scatter plot of the entrance inferences that colors each point based on the number of entrances.
+With an R-squared of $R^2$=`r round(summary(alternative_0_goal_error)$r.squared, 2)`, the number of entrances is likely a poor predictor of model error on the goal inferences. Let's compute the correlation between the predictions of the alternative model and the model error to check.
 
-```{r entrance_inference_by_entrance_count, fig.align="center"}
-plot_6 = data_7 %>%
-  mutate(num_entrances=ifelse(grepl("ND", substr(map, 1, 2)), 1,
-                              ifelse(grepl("DX|NX", substr(map, 1, 2)), 2, 3))) %>%
-  ggplot(aes(x=model, y=mean_human, label=map)) +
-  geom_point(aes(color=factor(num_entrances))) +
-  # geom_text(vjust=-1.0) +
-  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
-  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  scale_color_discrete(name="Number of\nEntrances") +
-  theme_classic() + 
-  theme(aspect.ratio=1.0,
-        plot.title=element_text(hjust=0.5),
-        legend.title=element_text(hjust=0.5))
-plot_6
-```
-
-There also doesn't seem to be anything here, but let's compute another linear regression that attempts to predict model error on the entrance inferences as a function of the number of entrances.
-
-```{r alternative_model_0_entrance_error}
-data_10 = data_6 %>%
-  left_join(model_3) %>%
-  mutate(model_error=human-model,
-         num_entrances=ifelse(grepl("ND", substr(map, 1, 2)), 1,
-                          ifelse(grepl("DX|NX", substr(map, 1, 2)), 2, 3)))
-alternative_0_entrance_error = lm(formula=model_error~num_entrances, data=data_10)
-summary(alternative_0_entrance_error)
-```
-
-Number of entrances also doesn't predict model error on the entrance inferences.
-
-### Map complexity as trial type
-
-Now we test if we can predict model error as a function of the trial types: DX, NX, PX, and UN. First, we generate a scatter plot of the goal inferences that colors each point based on the trial types.
-
-```{r goal_inference_by_trial_type, fig.align="center"}
-plot_7 = data_5 %>%
-  mutate(trial_type=substr(map, 4, 5)) %>%
-  ggplot(aes(x=model, y=mean_human, label=map)) +
-  geom_point(aes(color=factor(trial_type))) +
-  # geom_text(vjust=-1.0) +
-  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
-  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  scale_color_discrete(name="Trial Type") + 
-  theme_classic() +
-  theme(aspect.ratio=1.0,
-        plot.title=element_text(hjust=0.5),
-        legend.title=element_text(hjust=0.5))
-plot_7
-```
-
-*Work-in-progress*
-
-There seems to be higher error in the PX trials, but let's compute a [linear?] regression that predicts model error on the goal inferences as a function of the trial type. 
-
-```{r alternative_model_1_goal_error}
-data_11 = data_4 %>%
-  left_join(model_1) %>%
-  mutate(model_error=human-model,
-         trial_type=substr(map, 4, 5))
-alternative_1_goal_error = lm(formula=model_error~trial_type, data=data_11)
-summary(alternative_1_goal_error)
-```
-
-Trial type also doesn't seem to predict model error on the goal inferences. Next, we generate a scatter plot of the entrance inferences that colors each point based on the trial type.
-
-```{r entrance_inference_by_trial_type, fig.align="center"}
-plot_8 = data_7 %>%
-  mutate(trial_type=substr(map, 1, 2)) %>%
-  ggplot(aes(x=model, y=mean_human, label=map)) +
-  geom_point(aes(color=factor(trial_type))) +
-  # geom_text(vjust=-1.0) +
-  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
-  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
-  xlab("Model Predictions") +
-  ylab("Human Judgments") +
-  scale_color_discrete(name="Trial Type") +
-  theme_classic() + 
-  theme(aspect.ratio=1.0,
-        plot.title=element_text(hjust=0.5),
-        legend.title=element_text(hjust=0.5))
-plot_8
-```
-
-There seems to be clustering among like trials, but let's compute another [linear?] regression that attempts to predict model error on the entrance inferences as a function of the trial type.
-
-```{r alternative_model_1_entrance_error}
-data_12 = data_6 %>%
-  left_join(model_3) %>%
-  mutate(model_error=human-model,
-         trial_type=substr(map, 1, 2))
-alternative_1_entrance_error = lm(formula=model_error~trial_type, data=data_12)
-summary(alternative_1_entrance_error)
-```
-
-*Work-in-progress*
-
-## Predicting goal inference as a function of goal and entrance distance
-
-Now we test whether an alternative model that uses simple distance heuristics performs better than our model. This alternative model consists of a multinomial logistic regression that attempts to predict which goal the agent was going for using (1) the distance between the observation and each goal, (2) the distance between the observation and the nearest entrance, and (3) the interactions between (1) and (2).
-
-```{r alternative_model_distance_heuristics}
-# Read in the distances between the observation and each goal and entrance.
-data_13 = read_csv("data/experiment_1/alternative/distances.csv")
-
-# Create three binary columns that indicate which goal (A, B, or C) was judged to be the most likely goal.
-data_14 = data_5 %>%
-  select(map, goal, mean_human) %>%
-  spread(goal, mean_human) %>%
-  left_join(data_13)
-data_16 = tibble()
-for (m in data_14$map) {
-  data_15 = data_14 %>%
-    filter(map==m) %>%
-    mutate(max_goal=ifelse(max(A, B, C)==A, 1,
-                           ifelse(max(A, B, C)==B, 2, 3)))
-  data_16 = bind_rows(data_16, data_15)
-}
-
-# Set the baseline variable.
-data_16$max_goal = factor(data_16$max_goal)
-data_16$max_goal = relevel(data_16$max_goal, ref=1)
-
-# Compute the multinomial logistic regression.
-# alternative_2 = multinom(formula=max_goal~A_d+B_d+C_d+`1_d`+A_d:`1_d`+B_d:`1_d`+C_d:`1_d`,
-#                          data=data_16)
-## NEW STUFF
-d_doors = c()
-num_doors = c()
-for (i in 1:nrow(data_16)) {
-  d_doors = c(d_doors,
-              mean(c(data_16[i,]$`1_d`, data_16[i,]$`2_d`, data_16[i,]$`3_d`), na.rm=TRUE))
-  num_doors = c(num_doors,
-                sum(!is.na(c(data_16[i,]$`1_d`, data_16[i,]$`2_d`, data_16[i,]$`3_d`))))
-}
-data_17 = data_16 %>%
-  mutate(d_doors=d_doors, num_doors=num_doors)
-  
-
-data_16 = data_17
-alternative_2 = multinom(formula=max_goal~A_d*B_d*C_d*d_doors*num_doors,
-                         data=data_16)
-summary(alternative_2)
-```
-
-```{r model_comparison}
-# Stitch the alternative model predictions to the mean participant judgments and our model predictions.
-data_17 = data_5 %>%
-  select(map, goal, mean_human, model) %>%
-  left_join(., gather(data.frame(map=data_16$map,
-                                 A=fitted(alternative_2)[,1],
-                                 B=fitted(alternative_2)[,2],
-                                 C=fitted(alternative_2)[,3]),
-                      goal, alternative, A, B, C))
+```{r alternative_model_0_goal_correlation}
+# Combine the alternative model predictions with the model error.
+data_12 = data_11 %>%
+  mutate(alternative=as.vector(fitted(alternative_0_goal_error))) %>%
+  select(map, mean_model_error, alternative)
 
 # Define the bootstrap function for the bootstrap statistic.
 compute_cor = function(data, indices) {
-  return(cor(data$alternative[indices], data$mean_human[indices], method="pearson"))
+  return(cor(data$alternative[indices], data$mean_model_error[indices], 
+             method="pearson"))
 }
 
 # Define the bootstrap function to simulate the data.
@@ -623,17 +553,340 @@ compute_bootstrap = function(data) {
 
 # Compute the bootstrapped 95% CI.
 set.seed(seed)
-cor_3 = cor(data_17$alternative, data_17$mean_human, method="pearson")
-cor_3_bootstrap = compute_bootstrap(data_17)
+cor_3 = cor(data_12$alternative, data_12$mean_model_error, method="pearson")
+cor_3_bootstrap = compute_bootstrap(data_12)
 cor_3_ci = data.frame(
   lower=cor_3_bootstrap[4],
   upper=cor_3_bootstrap[5]
 )
+```
+
+The Pearson correlation of this alternative model is $r$=`r round(cor_3, 2)` (95% CI: `r round(cor_3_ci$lower, 2)`-`r round(cor_3_ci$upper, 2)`). The number of entrances is a poor predictor of model error on the goal inferences. Next, we generate a scatter plot of the entrance inferences that colors each point based on the number of entrances.
+
+```{r entrance_inference_by_entrance_count, fig.align="center"}
+plot_6 = data_9 %>%
+  mutate(num_entrances=ifelse(grepl("ND", substr(map, 1, 2)), 1,
+                              ifelse(grepl("DX|NX", substr(map, 1, 2)), 2,
+                                     3))) %>%
+  ggplot(aes(x=model, y=mean_human, label=map)) +
+  geom_point(aes(color=factor(num_entrances))) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Number of\nEntrances:") +
+  theme_classic() + 
+  theme(aspect.ratio=1.0,
+        plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_6
+```
+
+There also doesn't seem to be anything here, but let's compute another linear regression that attempts to predict model error on the entrance inferences as a function of the number of entrances.
+
+```{r alternative_model_0_entrance_error}
+data_13 = data_9 %>%
+  mutate(model_error=abs(mean_human-model)) %>%
+  group_by(map) %>%
+  summarize(mean_model_error=mean(model_error)) %>% 
+  mutate(num_entrances=ifelse(grepl("ND", substr(map, 1, 2)), 1,
+                              ifelse(grepl("DX|NX", substr(map, 1, 2)), 2, 3)))
+alternative_0_entrance_error = lm(formula=mean_model_error~num_entrances, 
+                                  data=data_13)
+summary(alternative_0_entrance_error)
+```
+
+With an $R^2$=`r round(summary(alternative_0_entrance_error)$r.squared, 2)`, the number of entrances is likely a poor predictor of model error on the entrance inferences. Let's compute the correlation between the predictions of the alternative model and the model error to check.
+
+```{r alternative_model_0_entrance_correlation}
+# Combine the alternative model predictions with the model error.
+data_14 = data_13 %>%
+  mutate(alternative=as.vector(fitted(alternative_0_entrance_error))) %>%
+  select(map, mean_model_error, alternative)
+
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$alternative[indices], data$mean_model_error[indices], 
+             method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CI.
+set.seed(seed)
+cor_4 = cor(data_14$alternative, data_14$mean_model_error, method="pearson")
+cor_4_bootstrap = compute_bootstrap(data_14)
+cor_4_ci = data.frame(
+  lower=cor_4_bootstrap[4],
+  upper=cor_4_bootstrap[5]
+)
+```
+
+The Pearson correlation of this alternative model is $r$=`r round(cor_4, 2)` (95% CI: `r round(cor_4_ci$lower, 2)`-`r round(cor_4_ci$upper, 2)`). The number of entrances is a poor predictor of model error on the entrance inferences.
+
+### Map complexity as trial type
+
+Now we test if we can predict model error as a function of the trial types: DX, NX, PX, and UN. First, we generate a scatter plot of the goal inferences that colors each point based on the trial types.
+
+```{r goal_inference_by_trial_type, fig.align="center"}
+plot_7 = data_6 %>%
+  mutate(trial_type=substr(map, 4, 5)) %>%
+  ggplot(aes(x=model, y=mean_human, label=map)) +
+  geom_point(aes(color=factor(trial_type))) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle("Model Goal Predictions vs. Participant Goal Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Trial Type:") + 
+  theme_classic() +
+  theme(aspect.ratio=1.0,
+        plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_7
+```
+
+There seems to be higher error in the PX trials, but let's compute a linear regression that predicts model error on the goal inferences as a function of the trial type. 
+
+```{r alternative_model_1_goal_error}
+data_15 = data_6 %>%
+  mutate(model_error=abs(mean_human-model)) %>%
+  group_by(map) %>%
+  summarize(mean_model_error=mean(model_error)) %>%
+  mutate(trial_type=substr(map, 4, 5))
+alternative_1_goal_error = lm(formula=mean_model_error~trial_type,
+                              data=data_15)
+summary(alternative_1_goal_error)
+```
+
+With an $R^2$=`r round(summary(alternative_1_goal_error)$r.squared, 2)`, trial type is likely a good predictor of model error on the goal inferences. Let's compute the correlation between the predictions of the alternative model and the model error to check.
+
+```{r alternative_model_1_goal_correlation}
+# Combine the alternative model predictions with the model error.
+data_16 = data_15 %>%
+  mutate(alternative=as.vector(fitted(alternative_1_goal_error))) %>%
+  select(map, mean_model_error, alternative)
+
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$alternative[indices], data$mean_model_error[indices], 
+             method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CI.
+set.seed(seed)
+cor_5 = cor(data_16$alternative, data_16$mean_model_error, method="pearson")
+cor_5_bootstrap = compute_bootstrap(data_16)
+cor_5_ci = data.frame(
+  lower=cor_5_bootstrap[4],
+  upper=cor_5_bootstrap[5]
+)
+```
+
+The Pearson correlation of this alternative model is $r$=`r round(cor_5, 2)` (95% CI: `r round(cor_5_ci$lower, 2)`-`r round(cor_5_ci$upper, 2)`). Trial type is a good predictor of model error on the goal inferences. Next, we generate a scatter plot of the entrance inferences that colors each point based on the trial type.
+
+```{r entrance_inference_by_trial_type, fig.align="center"}
+plot_8 = data_9 %>%
+  mutate(trial_type=substr(map, 1, 2)) %>%
+  ggplot(aes(x=model, y=mean_human, label=map)) +
+  geom_point(aes(color=factor(trial_type))) +
+  geom_smooth(method="lm", se=FALSE, linetype="dashed", color="grey") +
+  ggtitle("Model Entrance Predictions vs. Participant Entrance Judgments") +
+  xlab("Model Predictions") +
+  ylab("Human Judgments") +
+  ylim(0.0, 1.0) +
+  scale_color_discrete(name="Trial Type:") +
+  theme_classic() + 
+  theme(aspect.ratio=1.0,
+        plot.title=element_text(hjust=0.5),
+        legend.title=element_text(hjust=0.5))
+plot_8
+```
+
+There seems to be clustering among like trials, but let's compute another linear regression that attempts to predict model error on the entrance inferences as a function of the trial type.
+
+```{r alternative_model_1_entrance_error}
+data_17 = data_9 %>%
+  mutate(model_error=abs(mean_human-model)) %>%
+  group_by(map) %>%
+  summarize(mean_model_error=mean(model_error)) %>%
+  mutate(trial_type=substr(map, 1, 2))
+alternative_1_entrance_error = lm(formula=mean_model_error~trial_type, 
+                                  data=data_17)
+summary(alternative_1_entrance_error)
+```
+
+With an $R^2$=`r round(summary(alternative_1_entrance_error)$r.squared, 2)`, trial type is likely a good predictor of model error on the entrance inferences. Let's compute the correlation between the predictions of the alternative model and the model error to check.
+
+```{r alternative_model_1_entrance_correlation}
+# Combine the alternative model predictions with the model error.
+data_18 = data_17 %>%
+  mutate(alternative=as.vector(fitted(alternative_1_entrance_error))) %>%
+  select(map, mean_model_error, alternative)
+
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$alternative[indices], data$mean_model_error[indices], 
+             method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CI.
+set.seed(seed)
+cor_6 = cor(data_18$alternative, data_18$mean_model_error, method="pearson")
+cor_6_bootstrap = compute_bootstrap(data_18)
+cor_6_ci = data.frame(
+  lower=cor_6_bootstrap[4],
+  upper=cor_6_bootstrap[5]
+)
+```
+
+The Pearson correlation of this alternative model is $r$=`r round(cor_6, 2)` (95% CI: `r round(cor_6_ci$lower, 2)`-`r round(cor_6_ci$upper, 2)`). Trial type is a good predictor of model error on the entrance inferences.
+
+## Predicting goal inference as a function of goal and entrance distance
+
+Now we test whether an alternative model that uses simple distance heuristics performs better than our model. This alternative model consists of a multinomial logistic regression that attempts to predict which goal the agent was going for using (1) the distance between the observation and each goal, (2) the average distance between the observation and each entrance, (3) the number of entrances, and (4) all of their interactions.
+
+```{r alternative_model_distance_heuristics}
+# Read in the heuristics data for building the alternative model.
+data_19 = read_csv("data/experiment_1/alternative/distances.csv")
+
+# Merge the mean participant judgments on the goal inferences with the 
+# heuristics data.
+data_20 = data_6 %>%
+  select(map, goal, mean_human) %>%
+  spread(goal, mean_human) %>%
+  left_join(data_19)
+
+# Compute the average distance between the observation and each entrance and 
+# the goal that participants rated the highest for each map.
+data_22 = tibble()
+for (m in 1:length(data_20$map)) {
+  # Compute the average entrance distance and max goal for this map.
+  data_21 = data_20 %>%
+    filter(map==data_20$map[m]) %>%
+    mutate(entrance_d=mean(c(`1_d`, `2_d`, `3_d`), na.rm=TRUE),
+           max_goal=ifelse(max(A, B, C)==A, 1,
+                           ifelse(max(A, B, C)==B, 2, 3)))
+  
+  # Stack the data.
+  data_22 = data_22 %>%
+    rbind(data_21)
+}
+
+# Set up the alternative model.
+x = model.matrix(max_goal~A_d*B_d*C_d*entrance_d*num_entrances, data_22)[,-1]
+y = data_22$max_goal
+
+# Train the alternative model (using LASSO regularization to avoid overfitting)
+# and generate predictions using the leave-one-out method.
+set.seed(seed)
+A = c()
+B = c()
+C = c()
+for (testing_trial in 1:length(data_22$map)) {
+  # Set up an array of random regularization parameters.
+  lambdas = 10^seq(10, -2, length=100)
+
+  # Partition the data according to the leave-one-out method.
+  training_trials = setdiff(1:length(data_22$map), testing_trial)
+  x_train = x[training_trials,]
+  y_train = y[training_trials]
+  x_test = x[testing_trial,]
+  y_test = y[testing_trial]
+
+  # Train the LASSO-regularized model and find the lambda parameter with the 
+  # best fit.
+  lasso_model = glmnet(x_train, y_train, family="multinomial", alpha=1,
+                       lambda=lambdas)
+  cv_results = cv.glmnet(x_train, y_train, family="multinomial", alpha=1)
+  best_lambda = cv_results$lambda.min
+
+  # Generate the prediction of the testing trial.
+  predictions = predict(lasso_model, s=best_lambda, newx=t(x_test), 
+                        family="multinomial")
+  
+  # Store the predictions for each goal of this testing trial.
+  A = c(A, predictions[1])
+  B = c(B, predictions[2])
+  C = c(C, predictions[3])
+}
+
+# Store the predictions of the alternative model.
+alternative = data.frame(
+  map=data_22$map,
+  A=A,
+  B=B,
+  C=C
+)
+```
+
+```{r model_comparison}
+# Stitch the alternative model predictions to the mean participant judgments 
+# and our model predictions.
+data_23 = data_6 %>%
+  select(map, goal, mean_human, model) %>%
+  left_join(gather(alternative, goal, alternative, A, B, C))
+
+# Define the bootstrap function for the bootstrap statistic.
+compute_cor = function(data, indices) {
+  return(cor(data$alternative[indices], data$mean_human[indices],
+             method="pearson"))
+}
+
+# Define the bootstrap function to simulate the data.
+compute_bootstrap = function(data) {
+  # Run the simulations.
+  simulations = boot(data=data,
+                     statistic=compute_cor,
+                     R=10000)
+  
+  return(boot.ci(simulations, type="bca")$bca)
+}
+
+# Compute the bootstrapped 95% CI.
+set.seed(seed)
+cor_7 = cor(data_23$alternative, data_23$mean_human, method="pearson")
+cor_7_bootstrap = compute_bootstrap(data_23)
+cor_7_ci = data.frame(
+  lower=cor_7_bootstrap[4],
+  upper=cor_7_bootstrap[5]
+)
 
 # Define the bootstrap function for the bootstrap statistic.
 compute_cor_diff = function(data, indices) {
-  cor_alternative = cor(data$alternative[indices], data$mean_human[indices], method="pearson")
-  cor_model = cor(data$model[indices], data$mean_human[indices], method="pearson")
+  cor_alternative = cor(data$alternative[indices], data$mean_human[indices],
+                        method="pearson")
+  cor_model = cor(data$model[indices], data$mean_human[indices], 
+                  method="pearson")
   return(cor_alternative-cor_model)
 }
 
@@ -649,12 +902,173 @@ compute_bootstrap = function(data) {
 
 # Compute the correlation difference and the bootstrapped 95% CI.
 set.seed(seed)
-cor_4 = cor_3 - cor_2
-cor_4_bootstrap = compute_bootstrap(data_17)
-cor_4_ci = data.frame(
-  lower=cor_4_bootstrap[4],
-  upper=cor_4_bootstrap[5]
+cor_8 = abs(cor_2-cor_7)
+cor_8_bootstrap = compute_bootstrap(data_23)
+cor_8_ci = data.frame(
+  lower=cor_8_bootstrap[4],
+  upper=cor_8_bootstrap[5]
 )
 ```
 
-The Pearson correlation of the alternative model is _r_ = `r round(cor_3, 2)` (95% CI: `r round(cor_3_ci$lower, 2)`-`r round(cor_3_ci$upper, 2)`). The correlation difference between the alternative model and our model is $\Delta$_r_ = `r abs(round(cor_4, 2))` (95% CI: `r abs(round(cor_4_ci$upper, 2))`-`r abs(round(cor_4_ci$lower, 2))`).
+The Pearson correlation of the alternative model is $r$=`r round(cor_7, 2)` (95% CI: `r round(cor_7_ci$lower, 2)`-`r round(cor_7_ci$upper, 2)`). The correlation difference between the alternative model and our model is $\Delta r$=`r abs(round(cor_8, 2))` (95% CI: `r abs(round(cor_8_ci$upper, 2))`-`r abs(round(cor_8_ci$lower, 2))`).
+
+# Visualizations
+
+Here we plot the visualizations from the model.
+
+```{r plot_visualizations, fig.align="center", fig.height=26, fig.width=12}
+# Set the visualization threshold.
+threshold = 0.001
+
+# Read in the full set of state inferences.
+data_25 = tibble()
+for (file in list.files(model_path, pattern="states")) {
+  # Read in the state inferences for this map.
+  data_24 = read_csv(file.path(model_path, file)) %>%
+    mutate(map=gsub("_states_posterior.csv", "", file))
+  
+  # Concatenate these state inferences.
+  data_25 = data_25 %>%
+    bind_rows(data_24)
+}
+
+# Restructure the state inferences data.
+data_26 = data_25 %>%
+  filter(probability>=threshold) %>%
+  rownames_to_column("id") %>%
+  gather(step, state,
+         sapply(c(0:33), function(x) { return(paste("s_", x, sep="")) })) %>%
+  separate(step, into=c("discard", "time"), sep=2) %>%
+  select(-discard) %>%
+  mutate(id=as.numeric(id), time=as.numeric(time)) %>%
+  arrange(id, time) %>%
+  mutate(x=state%%map_width+1,
+         y=ceiling(state/map_width))
+
+# Trim the states after the goal has been reached since we're only considering
+# "entering" states.
+data_29 = tibble()
+  for (i in unique(data_26$id)) {
+    # Filter the current path.
+    data_27 = data_26 %>% 
+      filter(id==i)
+    
+    # Trim off any NAs, compute the length of the path with only
+    # "entering" states, then trim the path accordingly.
+    cutoff = length(na.omit(data_27$state)) / 2
+    data_28 = data_27 %>%
+      filter(time<cutoff)
+    
+    # Concatenate the current path.
+    data_29 = data_29 %>%
+      rbind(data_28)
+  }
+
+# Import the coordinates of the observations, inner walls, and outer walls.
+source("stimuli/experiment_1/map_specifications.R")
+
+# Define the coordinates of the goals.
+goals = data.frame(
+  x_1 = c(2.5, 8.5, 2.5),
+  x_2 = c(3.5, 9.5, 3.5),
+  y_1 = c(2.5, 2.5, 8.5),
+  y_2 = c(3.5, 3.5, 9.5),
+  label = c("A", "B", "C")
+)
+  
+# Define the coordinate bounds.
+map_height = 11
+map_width = 11
+
+# Set up the general color palette that we're going to visualize with.
+palette = colorRampPalette(brewer.pal(9, "GnBu"))
+
+# Generate the visualizations of the participant-generated paths for each map.
+plot_10 = list()
+plot_11 = list()
+for (trial_num in 1:length(unique(data_29$map))) {
+  # Extract the coordinates of the observation for this map.
+  crumbs = data.frame(
+    x=observations[[trial_num]][1],
+    y=observations[[trial_num]][2],
+    filename="stimuli/experiment_1/crumbs.png"
+  )
+  
+  # Compute the specific color palette based on the longest path for this map.
+  max_path_length = max(filter(data_29, map==maps[trial_num])$time) + 1
+  num_colors = round(max_path_length*1.4)
+  color_gradient = palette(num_colors)[(num_colors-max_path_length):num_colors]
+  
+  # Generate the visualization for this map.
+  plot_9 = data_29 %>%
+    filter(map==maps[trial_num]) %>%
+    mutate(max_time=max(time)) %>%
+    ggplot() +
+    geom_path(aes(x=x, y=y, group=id, color=time),
+              position=position_jitter(height=0.1, width=0.1)) +
+    geom_point(aes(x=x, y=y, group=id, color=time)) +
+    scale_x_continuous(name="", limits=c(0, map_width+1)) +
+    scale_y_reverse(name="", limits=c(map_height+1, 1)) +
+    coord_fixed() +
+    theme_void() +
+    theme(legend.position="none") +
+    geom_point(data=crumbs, aes(x=x, y=y), color="white", alpha=0.8, size=17) +
+    geom_image(data=crumbs, aes(x=x, y=y, image=filename), size=0.1) +
+    geom_rect(data=goals,
+              aes(xmin=x_1, xmax=x_2, ymin=y_1, ymax=y_2, fill=label),
+              alpha=1.0) +
+    geom_text(data=goals, aes(label=label, x=(x_1+x_2)/2, y=(y_1+y_2)/2),
+              size=9*(5/14)) +
+    scale_color_gradientn(colors=color_gradient,
+                          limits=c(0, max_path_length-1)) +
+    scale_fill_manual(values=c("#00AfEf", "#ED7D31", "#00B050", "#767171"))
+  
+  # Add the walls to the visualization.
+  for (wall in walls[trial_num][[1]]) {
+    plot_9 = plot_9 + wall
+  }
+  
+  # Add the border to the visualization.
+  for (segment in segments[trial_num][[1]]) {
+    plot_9 = plot_9 + segment
+  }
+  
+  # Store the plot separately before adding a title and adjusting the margins.
+  plot_10[[trial_num]] = plot_9
+  
+  # Add a title to the visualization, adjust the margins, and store it.
+  plot_11[[trial_num]] = plot_9 + 
+    ggtitle(maps[trial_num]) +
+    theme(plot.title=element_text(size=20, hjust=0.5, vjust=-10.0),
+          plot.margin=unit(c(-2, -3, -2, -3), "cm"))
+}
+
+# Plot the visualizations in a grid.
+plot_12 = plot_grid(plot_11[[1]], plot_11[[2]], plot_11[[3]], plot_11[[4]],
+                    plot_11[[5]], plot_11[[6]], plot_11[[7]], plot_11[[8]],
+                    plot_11[[9]], plot_11[[10]], plot_11[[11]], plot_11[[12]],
+                    plot_11[[13]], plot_11[[14]], plot_11[[15]], plot_11[[16]],
+                    plot_11[[17]], plot_11[[18]], plot_11[[19]], plot_11[[20]],
+                    plot_11[[21]], plot_11[[22]], plot_11[[23]],
+                    ncol=4)
+plot_12
+```
+
+## Saving the visualizations
+
+Here we save the visualizations (excluding the title and margin adjustments).
+
+```{r save_visualizations, eval=FALSE}
+# Save the visualizations.
+for (trial_num in 1:length(unique(data_29$map))) {
+  # Stitch the path for this visualization.
+  data_path = paste("data/experiment_1/model/visualizations/Manhattan/",
+                    maps[trial_num], sep="")
+  
+  # Save this visualization.
+  ggsave(paste(data_path, ".png", sep=""), plot_10[[trial_num]], device="png", 
+         height=4.5, width=7.3)
+  ggsave(paste(data_path, ".pdf", sep=""), plot_10[[trial_num]], device="pdf", 
+         height=4.5, width=7.3)
+}
+```

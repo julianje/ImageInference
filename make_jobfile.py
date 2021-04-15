@@ -1,11 +1,10 @@
-import subprocess
 import sys
 
 # Initialize the experiment number.
 EXPERIMENT = sys.argv[1]
 
-# Initialize the number of observations.
-NUM_OBSERVATIONS = int(sys.argv[2])
+# Initialize the number of samples.
+NUM_SAMPLES = sys.argv[2]
 
 # Initialize a list of dictionaries that links maps to their doors and 
 # observations for the maps with one observation.
@@ -56,13 +55,18 @@ TWO_OBSERVATION_MAPS = [
 ]
 
 # Create the formatting strings and out them to stdout.
-if NUM_OBSERVATIONS == 1:
+if EXPERIMENT == "1":
 	for m in ONE_OBSERVATION_MAPS:
-		print("python %s.py %s '%s' '%s'" % \
-			(EXPERIMENT, m["map"], m["doors"], m["observation"]))
-elif NUM_OBSERVATIONS == 2:
+		print("python experiment_1.py %s '%s' '%s' %s" % \
+			(m["map"], m["doors"], m["observation"], NUM_SAMPLES))
+elif EXPERIMENT == "3":
 	for m in TWO_OBSERVATION_MAPS:
-		print("python %s.py %s '%s' '%s'" % \
-			(EXPERIMENT, m["map"], m["doors"], m["observation"]))
+		print("python experiment_3.py %s '%s' '%s' %s" % \
+			(m["map"], m["doors"], m["observation"], NUM_SAMPLES))
+elif EXPERIMENT == "error_analysis":
+	for m in TWO_OBSERVATION_MAPS:
+		for i in range(100):
+			print("python error_analysis.py %s '%s' '%s' %s %s" % \
+				(m["map"], m["doors"], m["observation"], NUM_SAMPLES, i))
 else:
-	sys.exit("Please enter a valid number of observations (1 or 2).")
+	sys.exit("Please enter a valid experiment.")

@@ -3,20 +3,19 @@ library(tidyverse)
 library(RColorBrewer)
 library(ggimage)
 
-# Set working directory.
-# directory <- "~/Documents/Projects/Models/ImageInference/ImageInference/"
-directory <- "D:/Research/ImageInference/"
-setwd(directory)
+# Set the path.
+sys_path = ifelse(Sys.info()["sysname"]=="Linux", "/media/michael/Data", "D:")
+setwd(file.path(sys_path, "Research/ImageInference"))
 
 # Source the file with all of the map data.
-# source("stimuli/experiment_3/map_specifications.R")
+source("stimuli/experiment_3/map_specifications.R")
 
 # Only plot trajectories with probability higher than the threshold.
 threshold <- 0.001
 
 # Read in the full set of state inferences.
 # StatePredictions <- data.frame(Files=list.files("data/experiment_3/model/predictions/Manhattan/no_path_prior_2/")) %>%
-StatePredictions <- data.frame(Files=list.files("data/experiment_3/model/predictions/Manhattan/")) %>%
+StatePredictions <- data.frame(Files=list.files("data/experiment_3/model/predictions/Manhattan/testing/")) %>%
   # mutate(States=str_detect(Files, "States_Posterior_one_agent")) %>%
   mutate(States=str_detect(Files, "States_Posterior_two_agents")) %>%
   tbl_df %>% 
@@ -26,7 +25,7 @@ fullposterior <- do.call(bind_rows,
                          lapply(StatePredictions$Files, 
                                 function(x) {
                                   # mutate(read_csv(paste("data/experiment_3/model/predictions/Manhattan/no_path_prior_2/", x, sep=""),
-                                  mutate(read_csv(paste("data/experiment_3/model/predictions/Manhattan/", x, sep=""),
+                                  mutate(read_csv(paste("data/experiment_3/model/predictions/Manhattan/testing/", x, sep=""),
                                                   col_types=cols()), 
                                          Trial=x)
                                 }))
@@ -39,9 +38,9 @@ PlotPath <- function(m) {
   posterior <- fullposterior %>%
     mutate(Trial=as.character(Trial)) %>%
     # filter(Trial==paste(maps[m], "_States_Posterior_one_agent.csv", sep="")) %>% 
-    filter(Trial==paste("P2_2", "_States_Posterior_two_agents.csv", sep="")) %>%
+    # filter(Trial==paste("P2_2", "_States_Posterior_two_agents.csv", sep="")) %>%
     # filter(Trial==paste("P2_2", "_States_Posterior_one_agent.csv", sep="")) %>%
-    # filter(Trial==paste("D2_2", "_States_Posterior_two_agents.csv", sep="")) %>%
+    filter(Trial==paste("P2_1", "_States_Posterior_two_agents.csv", sep="")) %>%
     dplyr::select(-Trial)
   
   scene_x_0 = posterior$Scene0[1] %% map_width + 1
@@ -83,11 +82,10 @@ PlotPath <- function(m) {
                       y_1=scene_y_1,
                       filename="stimuli/experiment_1/crumbs.png")
   
-
   # Color path based on time.
   plot = States %>% 
     # filter(Probability>=threshold) %>%
-    filter(Id==26115) %>%
+    filter(Id==4156) %>%
     arrange(Probability, Time) %>%
     ggplot() +
     geom_path(aes(x=x, y=y, group=Id, color=Time, alpha=Probability+0.75),
@@ -110,10 +108,10 @@ PlotPath <- function(m) {
     # geom_point(aes(x=scene_x, y=scene_y), size=6, pch=19, colour="#000000") +
     geom_image(data=crumbs, aes(x=scene_x_0, y=scene_y_0, image=filename), size=0.1) +
     geom_image(data=crumbs, aes(x=scene_x_1, y=scene_y_1, image=filename), size=0.1) +
-    geom_point(data=data.frame(xv=c(2.5, 2.5, 9.5, 9.5), 
-                               yv=c(2.5, 9.5, 2.5, 9.5)), 
-               aes(xv, yv), 
-               size=0.1) +
+    # geom_point(data=data.frame(xv=c(2.5, 2.5, 9.5, 9.5), 
+    #                            yv=c(2.5, 9.5, 2.5, 9.5)), 
+    #            aes(xv, yv), 
+    #            size=0.1) +
     geom_rect(data=data.frame(x1=c(2.5, 8.5, 2.5), 
                               x2=c(3.5, 9.5, 3.5),
                               y1=c(2.5, 2.5, 8.5),

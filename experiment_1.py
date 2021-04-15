@@ -1,185 +1,196 @@
+import csv
+import sys
+
 from Bishop import *
 
-import csv
-import itertools as it
-import matplotlib.pyplot as plt
-import numpy as np
-import sys
+# Load the map we're simulating.
+WORLD = sys.argv[1]
+
+# Load the (encoded) coordinates of the door(s) and observation for this map.
+ENCODED_DOORS = sys.argv[2]
+ENCODED_OBSERVATION = sys.argv[3]
+
+# Initialize the number of utility functions we want to sample.
+NUM_SAMPLES = int(sys.argv[4])
+
+# Initialize the number of paths we want to sample per utility function.
+NUM_PATHS = 1000
+
+# Set the stage of the path we're analyzing.
+STAGE = "entering"
+
+# Set the path for storing the model predictions.
+PATH = "data/experiment_1/model/predictions/Manhattan/"
+
+# Compute the likelihood of the scene given possible paths, 
+# p(s | t, g=g', d=d').
+def scene_likelihood(agent, observation):
+	# Generate paths according to the current map and policy.
+	simulations = agent.SimulateAgents(NUM_PATHS, ResampleAgent=False, 
+		Simple=False, Verbose=False, replan=False)
+
+	# Check which paths contain the observation.
+	scene_matches = np.zeros(NUM_PATHS)
+	for i in range(len(simulations.States)):
+		state_sequence = simulations.States[i]
+		if STAGE == "entering":
+			path = state_sequence[0:len(state_sequence)/2]
+		elif STAGE == "exiting":
+			path = state_sequence[len(state_sequence)/2:len(state_sequence)]
+		elif STAGE == "either":
+			path = state_sequence
+		scene_matches[i] = (observation in path) * 1.0 / len(path)
+
+	# Compute the scene likelihood.
+	scene_likelihood = sum(scene_matches) * 1.0 / NUM_PATHS
+
+	return([
+		agent.Plr.GetPlanDistribution(),
+		scene_likelihood,
+		scene_matches,
+		simulations
+	])
 
 # Transform x- and y-coordinates into a state representation.
 def transform_state(agent, coords):
 	return (coords[0]*agent.Plr.Map.mapwidth) + coords[1]
 
-def scene_likelihood(agent, scene, num_paths, stage="entering"):
-	simulations = observer.SimulateAgents(num_paths, ResampleAgent=False, 
-		Verbose=False, replan=False)
-	if stage == "entering":
-		scene_matches = [scene in states[0:len(states)/2] \
-			for states in simulations.States]
-	if stage == "exiting":
-		scene_matches = [scene in states[len(states)/2:len(states)] \
-			for x in Simulations.States]
-	if stage == "either":
-		scene_matches = [scene in states for states in Simulations.States]
-	return([agent.Plr.Agent.rewards, agent.Plr.GetPlanDistribution(), 
-		sum(scene_matches)*1.0/num_paths, scene_matches, simulations])
+# Create an agent for this map (while suppressing print output).
+sys.stdout = open(os.devnull, "w")
+agent = LoadObserver("stimuli/experiment_1/"+WORLD, Silent=True)
+sys.stdout = sys.__stdout__
 
-# Get probability that agent generates scene, either *before* collecting the goal
-# def SceneLikelihood(Observer, Scene, rollouts=10000, verbose=True, Stage="Entering"):
-# 	Simulations = Observer.SimulateAgents(rollouts, ResampleAgent=False, Simple=False, Verbose=verbose, replan=False)
-# 	if Stage=="Entering":
-# 		SceneMatches = [Scene in x[0:len(x)/2] for x in Simulations.States]
-# 	if Stage=="Exiting":
-# 		SceneMatches = [Scene in x[len(x)/2:len(x)] for x in Simulations.States]
-# 	if Stage=="Either":
-# 		SceneMatches = [Scene in x for x in Simulations.States]
-# 	return([Observer.Plr.Agent.rewards, Observer.Plr.GetPlanDistribution(), sum(SceneMatches)*1.0/rollouts, 
-# 		SceneMatches, Simulations])
+# Decode the coordinates of the doors and the observation for this map.
+doors = [[int(num) for num in pair.split(" ")] \
+	for pair in ENCODED_DOORS.split("-")]
+observation = transform_state(agent, \
+	[int(num) for num in ENCODED_OBSERVATION.split(" ")])
 
-# Inference parameters
-verbose = False
-stage = "entering"
-samples = int(sys.argv[2])
-num_paths = 1000
-path = "data/model/predictions/Manhattan/"
+# Sample utility functions and compute the likelihood of the scene given 
+# a set of sampled paths.
+print("Map: "+WORLD)
+results = [0] * NUM_SAMPLES
+for i in range(NUM_SAMPLES):
+	# Let the user know which sample we're on.
+	print("Utility function #"+str(i+1))
 
-# Uncomment these lines if running on the cluster or as batch.
-# TrialName = sys.argv[1]
-# World = sys.argv[1]
-# Doors = [[int(num) for num in pair.split(" ")] for pair in sys.argv[2].split("-")]
-# Observation = [int(num) for num in sys.argv[3].split(" ")]
-# plt.switch_backend('agg')
-
-# Uncomment these lines if running locally.
-# TrialName = "PX_NX_0"
-# World = "PX_NX_0"
-# Doors = [[64, 65], [106, 117], [67, 66]]
-# Observation = [4, 7]
-world = sys.argv[1]
-doors = [[16, 5], [56, 55]]
-observation = [6, 4]
-
-print(world)
-
-#############
-# Run model #
-#############
-agent = LoadObserver("stimuli/experiment_1/"+world, Silent = not verbose)
-scene = transform_state(observation)
-results = [-1] * samples
-entrance = [-1] * samples
-for i in range(samples):
-	print("Reward function #"+str(i+1))
-
-	# Sample which door this agent uses.
+	# Sample which door the agent will use.
 	door = random.choice(doors)
 	agent.SetStartingPoint(door[0], Verbose=False)
 	agent.Plr.Map.ExitState = door[1]
 
-	# Sample a reward function for this agent.
-	agent.Plr.Agent.ResampleAgent()
-	# Run the planner manually since SceneLikelihood has planning turned off on SimulateAgents
-	agent.Plr.Prepare(Validate=False) # Don't check for inconsistencies in model so that code runs faster
+	# Run the planner for this agent (while supressing print output).
+	sys.stdout = open(os.devnull, "w")
+	agent.Plr.Prepare()
+	sys.stdout = sys.__stdout__
 
-	results[i] = SceneLikelihood(agent, scene, num_paths, verbose, stage=stage)
-	entrance[i] = door[0]
+	# Sample a utility function for the agent.
+	agent.Plr.Utilities = np.array([random.random()*100 \
+		for goal in agent.Plr.Map.ObjectNames])
 
-sys.exit()
+	# Compute and store the likelihood of the scene given this utility
+	# function.
+	results[i] = scene_likelihood(agent, observation)
 
-##########################
-## Now do stuff with the joint distribution
-#########################
-# Get normalizing constant over reward functions:
-RNormalizer = sum([Results[i][2] for i in range(len(Results))])
-# Normalize samples:
-for i in range(len(Results)):
-	Results[i][2] /= RNormalizer
-	# if RNormalizer != 0:
-	# 	Results[i][2] /= RNormalizer
+# Extract the posterior over states and actions (i.e., paths).
+state_sequences = {}
+action_sequences = {}
+for result in results:
+	# Execute if this utility function has some non-zero likelihood of 
+	# generating the scene.
+	if result[1] != 0:
+		# Iterate through each path sampled using this utility function and 
+		# check if it contained the observation.
+		for i in range(NUM_PATHS):
+			# If this path contained the observation, store its state and 
+			# action sequence.
+			if result[2][i] != 0:
+				action_sequence = result[3].Actions[i]
+				state_sequence = result[3].States[i]
 
-# Get Probability that agent pursues each goal:
-##############################################
-GoalProbs= [sum([Results[sample][1][goal]*Results[sample][2] for sample in range(len(Results))]) for goal in range(len(O.Plr.Map.ObjectLocations))]
-GoalNames=O.Plr.Map.ObjectNames
-
-# plt.figure(1)
-# xvals = np.arange(len(GoalNames))
-# plt.bar(xvals,GoalProbs,align='center',alpha=0.5)
-# plt.xticks(xvals,GoalNames)
-# plt.ylabel('Probability')
-# axes = plt.gca()
-# axes.set_ylim([0,1])
-# plt.title(TrialName)
-# plt.savefig(path+TrialName+".png")
-# plt.close(1)
-
-# Get Posterior over states and actions:
-########################################
-# Put the samples in a dictionary
-ActionPosterior = {}
-StatePosterior = {}
-for R in Results:
-	# Second entry encodes entire likelihood of reward function.
-	# So if reward function can't generate scene then don't bother.
-	if R[2] != 0:
-		# R[3] has a boolean vector of which samples match image
-		for sampleno in range(len(R[3])):
-			action = R[4].Actions[sampleno]
-			states = R[4].States[sampleno]
-			ImageMatch = R[3][sampleno]
-			# If action will have probability zero because it never matched scene, then don't bother.
-			if ImageMatch:
-				# If action is already in dictionary just add the new probability.
-				if tuple(action) in ActionPosterior:
-					ActionPosterior[tuple(action)] += R[2] # Likelihood of reward function * likelihood of action generating scene
+				# If this state sequence is already stored, just add its
+				# probability, p(s | t, g=g', d=d'). This term is multiplied 
+				# by the frequency of the trajectory, which corresponds to
+				# p(t | g=g', d=d').
+				if tuple(state_sequence) in state_sequences:
+					state_sequences[tuple(state_sequence)] += result[1]
 				else:
-					ActionPosterior[tuple(action)] = R[2]
-				# Same for scenes
-				if tuple(states) in StatePosterior:
-					StatePosterior[tuple(states)] += R[2] # Likelihood of reward function * likelihood of action generating scene
+					state_sequences[tuple(state_sequence)] = result[1]
+
+				# If this action sequence is already stored, just add its
+				# probability.
+				if tuple(action_sequence) in action_sequences:
+					action_sequences[tuple(action_sequence)] += result[1]
 				else:
-					StatePosterior[tuple(states)] = R[2]
+					action_sequences[tuple(action_sequence)] = result[1]
 
-# Remove dictionary ugliness and normalize
-ca = sum(ActionPosterior.values())
-InferredActions = [ActionPosterior.keys(),ActionPosterior.values()]
-InferredActions[1] = [x/ca for x in InferredActions[1]]
+# Normalize the state sequences to generate the posterior over states.
+states_posterior = [state_sequences.keys(), state_sequences.values()]
+states_posterior[1] = [states_likelihood/sum(state_sequences.values())
+	for states_likelihood in states_posterior[1]]
 
-cb = sum(StatePosterior.values())
-InferredStates = [StatePosterior.keys(),StatePosterior.values()]
-InferredStates[1] = [x/cb for x in InferredStates[1]]
+# Normalize the action sequences to generate the posterior over actions.
+actions_posterior = [action_sequences.keys(), action_sequences.values()]
+actions_posterior[1] = [actions_likelihood/sum(action_sequences.values())
+	for actions_likelihood in actions_posterior[1]]
 
-# Save state and action posterior
-# as a csv so we can visualize them in R
-filename = path + world + "_States_Posterior.csv"
-with open(filename, "w") as model_inferences:
-	model_writer = csv.writer(model_inferences, delimiter=",")
-	observation_length = max([len(x) for x in inferred_states[0]])
-	#ObservationLength=max([max([len(x) for x in Results[i][4].States]) for i in range(len(Results))])
-	model_writer.writerow(["MapHeight", "MapWidth", "Scene", "Probability"]+["Obs"+str(i) for i in range(observation_length)])
-	[model_writer.writerow(
-		[agent.Plr.Map.mapheight,agent.Plr.Map.mapwidth,Scene,InferredStates[1][i]]+list(InferredStates[0][i])) for i in range(len(InferredStates[1]))]
+# Normalize the likelihood of the scene over the sampled doors and utility 
+# functions.
+results_norm = sum([results[i][1] for i in range(NUM_SAMPLES)])
+if results_norm == 0:
+	sys.exit("ERROR: No valid utility functions were sampled.")
+else:
+	for i in range(NUM_SAMPLES):
+		results[i][1] /= results_norm
 
-File = path + TrialName + "_Actions_Posterior.csv"
-with open(File,mode='w') as model_inferences:
-	model_writer = csv.writer(model_inferences, delimiter=",")
-	ObservationLength=ObservationLength-1 # It will just be one less  than states above.
-	model_writer.writerow(['MapHeight','MapWidth','Scene','Probability']+["Obs"+str(i) for i in range(ObservationLength)])
-	[model_writer.writerow([O.Plr.Map.mapheight,O.Plr.Map.mapwidth,Scene,InferredActions[1][i]]+list(InferredActions[0][i])) for i in range(len(InferredActions[1]))]
+# Compute the probability of the agent pursuing each goal.
+goal_probabilities = [0] * len(agent.Plr.Map.ObjectNames)
+for g in range(len(agent.Plr.Map.ObjectLocations)):
+	goal_probabilities[g] = sum([results[i][0][g]*results[i][1] \
+		for i in range(NUM_SAMPLES)])
+goals_posterior = [agent.Plr.Map.ObjectNames, goal_probabilities]
 
-File = path + TrialName + "_Goal_Posterior.csv"
-with open(File,mode='w') as model_inferences:
-	model_writer = csv.writer(model_inferences, delimiter=",")
-	model_writer.writerow(['Goal','Probability'])
-	[model_writer.writerow([GoalNames[i],GoalProbs[i]]) for i in range(len(GoalNames))]
+# Store the posterior over states.
+with open(PATH+WORLD+"_states_posterior.csv", "w") as file:
+	# Compute the state sequence length of the longest path.
+	max_state_sequence = max([len(state_sequence) \
+		for state_sequence in states_posterior[0]])
 
-# Create CSV with time estimate:
-ImageStep = [x.index(Scene) for x in InferredStates[0]]
-StepLength = [len(x) for x in InferredStates[0]]
-Probabilities = InferredStates[1]
+	# Write the data to a file.
+	writer = csv.writer(file, delimiter=",")
+	writer.writerow(["map_height", "map_width", "observation", "probability"] \
+		+ ["s_"+str(i) for i in range(max_state_sequence)])
+	for i in range(len(states_posterior[0])):
+		writer.writerow([
+			agent.Plr.Map.mapheight,
+			agent.Plr.Map.mapwidth,
+			observation,
+			states_posterior[1][i]
+		]
+		+ list(states_posterior[0][i]))
 
-File = path + TrialName + "_Time_Estimates.csv"
-with open(File,mode='w') as model_inferences:
-	model_writer = csv.writer(model_inferences, delimiter=",")
-	model_writer.writerow(['Step','PathLength','Probability'])
-	[model_writer.writerow([ImageStep[i],StepLength[i],Probabilities[i]]) for i in range(len(Probabilities))]
+# Store the posterior over actions.
+with open(PATH+WORLD+"_actions_posterior.csv", "w") as file:
+	# Compute the action sequence length of the longest path.
+	max_action_sequence = max_state_sequence - 1
+
+	# Write the data to a file.
+	writer = csv.writer(file, delimiter=",")
+	writer.writerow(["map_height", "map_width", "observation", "probability"] \
+		+ ["a_"+str(i) for i in range(max_action_sequence)])
+	for i in range(len(actions_posterior[0])):
+		writer.writerow([
+			agent.Plr.Map.mapheight,
+			agent.Plr.Map.mapwidth,
+			observation, 
+			actions_posterior[1][i]
+		]
+		+ list(actions_posterior[0][i]))
+
+# Store the posterior over goals.
+with open(PATH+WORLD+"_goals_posterior.csv", "w") as file:
+	# Write the data to a file.
+	writer = csv.writer(file, delimiter=",")
+	writer.writerow(["goal", "probability"])
+	for i in range(len(goals_posterior[0])):
+		writer.writerow([goals_posterior[0][i], goals_posterior[1][i]])
