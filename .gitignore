@@ -1,5 +1,10 @@
-mturk_results.csv
 *.docx
 *.pptx
+mturk_results.csv
+cluster/
+experiments/end.php
+experiments/experiment_4/end.php
+experiments/experiment_4/fail.php
 OSF/
+stimuli/experiment_4/*.pdf
 writing/

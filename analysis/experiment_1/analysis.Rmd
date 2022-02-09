@@ -250,7 +250,7 @@ cor_0_ci = data.frame(
 )
 ```
 
-The Pearson correlation is $r$=`r round(cor_0, 2)` (95% CI: `r round(cor_0_ci$lower, 2)`-`r round(cor_0_ci$upper, 2)`). Next, we generate comparisons for each trial.
+For the goal inferences, the Pearson correlation is $r$=`r round(cor_0, 2)` (95% CI: `r round(cor_0_ci$lower, 2)`-`r round(cor_0_ci$upper, 2)`). Next, we generate goal inference comparisons for each trial.
 
 ```{r goal_inference_per_trial, fig.align="center"}
 # Plot goal inferences by trial.
@@ -406,7 +406,7 @@ cor_1_ci = data.frame(
 )
 ```
 
-The Pearson correlation is $r$=`r round(cor_1, 2)` (95% CI: `r round(cor_1_ci$lower, 2)`-`r round(cor_1_ci$upper, 2)`). Next, we generate comparisons for each trial.
+For the entrance inferences, the Pearson correlation is $r$=`r round(cor_1, 2)` (95% CI: `r round(cor_1_ci$lower, 2)`-`r round(cor_1_ci$upper, 2)`). Next, we generate entrance inference comparisons for each trial.
 
 ```{r entrance_inference_per_trial, fig.align="center"}
 # Plot entrance inferences by trial.
@@ -483,7 +483,7 @@ cor_2_ci = data.frame(
 )
 ```
 
-The Pearson correlation is $r$=`r round(cor_2, 2)` (95% CI: `r round(cor_2_ci$lower, 2)`-`r round(cor_2_ci$upper, 2)`).
+The combined Pearson correlation is $r$=`r round(cor_2, 2)` (95% CI: `r round(cor_2_ci$lower, 2)`-`r round(cor_2_ci$upper, 2)`).
 
 # Alternative Models
 
