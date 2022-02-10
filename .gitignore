@@ -5,6 +5,7 @@ experiments/end.php
 experiments/experiment_4/end.php
 experiments/experiment_4/fail.php
 mturk_results.csv
+error_analysis*
 OSF/
 stimuli/experiment_4/*.pdf
 writing/
