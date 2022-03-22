@@ -1,9 +1,6 @@
 import csv
 import numpy as np
 
-# Set up the path to the experiment.
-PATH = "../experiments/experiment_4/"
-
 # Function for creating a 4x4 tile of priors.
 def make_tile(priors):
     return np.array([
@@ -12,9 +9,6 @@ def make_tile(priors):
         np.roll(priors, 2),
         np.roll(priors, 3)
     ])
-
-# Set the seed.
-np.random.seed(0)
 
 # Define the types of prior distributions.
 goal_priors = ["333", "621", "162", "216"]
@@ -65,7 +59,7 @@ prior_assignment[0:num_participants//2, num_trials] = "0"
 prior_assignment[num_participants//2:num_participants, num_trials] = "1"
 
 # Print to a file.
-with open(PATH+"condition_assignment.csv", "w") as file:
-    writer = csv.writer(file, delimiter=",", lineterminator="\n")
+with open("condition_assignment.csv", "w") as file:
+    writer = csv.writer(file, lineterminator="\n")
     for row in prior_assignment:
         writer.writerow(row)

@@ -7,7 +7,7 @@ function make_slides(f) {
   slides.i0 = slide({
     name: "i0",
     start: function() {
-        exp.startT = Date.now();
+      exp.startT = Date.now();
     }
   });
 
@@ -87,7 +87,7 @@ function make_slides(f) {
       // If a participant fails to answer every question.
       if ((exp.target_0 === undefined) || (exp.target_1 === undefined) || (exp.target_2 === undefined) ||
           (exp.target_3 === undefined) || (exp.target_4 === undefined) || (exp.target_5 === undefined)) {
-          $(".catch_error").show();
+        $(".catch_error").show();
       }
 
       // If a participant answers any question incorrectly.
