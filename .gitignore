@@ -1,6 +1,7 @@
 *.docx
 *.pptx
-cluster/
+cluster/*.sh
+cluster/*.py
 pilot_*
 experiments/end.php
 experiments/experiment_4/end.php
