@@ -22,13 +22,13 @@ To run the analysis code, you will need R 4.1.2 (or higher) and R Markdown 2.11 
 
 ### Data processing scripts
 
-For Experiment 2 and Experiment 3, you will need to run a data processing script before you can run the analysis code on the newly generated model predictions (this script simply concatenates a bunch of individual files). For Experiment 2, the Bayes factors need to be stitched into a single file once they are computed. The script `combine_bayes_factors.sh` does this by running the following command inside of a Bash terminal in the project root directory:
+For Experiment 2 and Experiment 3, you will need to run a data processing script before you can run the analysis code on the newly generated model predictions (each script simply concatenates a bunch of individual data files). For Experiment 2, `combine_bayes_factors.sh` concatenates the individual Bayes factors into a single file. To do this, run the following command inside of a Bash terminal in the project root directory:
 
 ```
 bash utils/combine_bayes_factors.sh data_1
 ```
 
-For Experiment 3, the posteriors similarly need to be stitched together. The script `combine_posteriors.sh` does this by running the following command inside of a Bash terminal in the project root directory:
+For Experiment 3, `combine_posteriors.sh` similarly concatenates the individual posteriors into a single file. To do this, run the following command inside of a Bash terminal in the project root directory:
 
 ```
 bash utils/combine_posteriors.sh
