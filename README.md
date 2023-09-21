@@ -24,8 +24,12 @@ To run the analysis code, you will need R 4.1.2 (or higher) and R Markdown 2.11 
 
 For Experiment 2, the Bayes factors need to be stitched into a single file once they are computed. The script `utils/combine_bayes_factors.sh` does this by running the following command inside of a Bash terminal:
 
-```bash utils/combine_bayes_factors.sh data_1```
+```
+bash utils/combine_bayes_factors.sh data_1
+```
 
 For Experiment 3, the posteriors similarly need to be stitched together. The script `utils/combine_posteriors.sh` does this by running the following command inside of a Bash terminal:
 
-```bash utils/combine_posteriors.sh```
+```
+bash utils/combine_posteriors.sh
+```
