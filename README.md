@@ -8,7 +8,7 @@ Project repository for the paper, "Social inferences from physical evidence via 
 - `cluster`: Contains the terminal commands for generating the model predictions for each trial per experiment
 - `data`: Contains the raw and processed participant data and model predictions
 - `experiments`: Contains the web code for generating the experiments
-- `models`: Contains the Python code for generating model predictions given model parameters
+- `models`: Contains the Python code for generating model predictions given experiment parameters
 - `stimuli`: Contains the stimuli used in the experiments
 - `utils`: Contains scripts for processing data and updating model parameters
 
